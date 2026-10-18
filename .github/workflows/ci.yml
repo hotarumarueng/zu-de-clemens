@@ -22,5 +22,11 @@ jobs:
         run: |
           claude plugin validate .
           claude plugin validate plugins/zu-de-clemens
+      - name: Install D2
+        run: |
+          curl -fsSL https://github.com/d2lang/d2/releases/download/v0.9.0/d2-v0.9.0-linux-amd64.tar.gz | tar -xz
+          echo "$PWD/d2-v0.9.0/bin" >> "$GITHUB_PATH"
       - name: Test
         run: claude plugin test plugins/zu-de-clemens
+      - name: Check catalog samples
+        run: node scripts/check-catalog.mjs
