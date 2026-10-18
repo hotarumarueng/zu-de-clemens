@@ -1,0 +1,40 @@
+direction: down
+
+triggers: きっかけ {
+  ask: Claude の質問\n(AskUserQuestion)
+  turn: Claude の応答の終わり\n(turn.complete)
+  prompt: 利用者の入力\n(prompt.submit)
+}
+register: register.tsx\nきっかけを振り分ける
+jev: jev.ts\n材料を JSON にして判定を頼む
+jevapi: Jev API\n(TypeSafe)
+gate: しきい値以上？ {shape: diamond}
+idle: 何もしない
+suggest: pane.tsx\n図の提案と［図にする］
+user1: 利用者が押す
+catalog: catalog.ts\n図の種類カタログ
+draw: draw.ts\n図とおすすめを作る
+fork: fork\n(いまの会話の Claude)
+d2: D2\n(手元)
+show: pane.tsx\n図・おすすめ・確率
+log: log.ts\n回答ログに追記
+store: 回答ログ\n(データ置き場) {shape: cylinder}
+
+triggers.ask -> register
+triggers.turn -> register
+triggers.prompt -> register
+register -> jev: ①
+jev <-> jevapi: ②
+jev -> gate
+gate -> idle: いいえ
+gate -> suggest: はい
+suggest -> user1
+user1 -> draw: 押した
+gate -> draw: オートモード {style.stroke-dash: 4}
+catalog -> draw
+draw <-> fork: ③
+draw <-> d2: ④
+draw -> show: ⑤
+show -> log: ⑥ 回答・提案への反応
+suggest -> log: 放置・いらない
+log -> store
