@@ -42,12 +42,7 @@
     "language": {
       "type": "string",
       "title": "Language",
-      "description": "Language of the pane. auto follows the conversation.",
-      "options": [
-        "auto",
-        "ja",
-        "en"
-      ],
+      "description": "Language of the pane: auto, ja or en. auto follows the conversation.",
       "default": "auto"
     }
   }

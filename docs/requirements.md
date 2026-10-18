@@ -84,7 +84,9 @@
 - D2 の PNG 出力（`--stdout-format png`）は追加のダウンロードなしで動く（2026-10-18、約 15 ミリ秒）
 - セッションにデスクトップアプリの画面がつながっていないとき、`$.ui.open` は `isPlaced: false`（`no-surface`）を返す（2026-10-18）
 
+- `userConfig` の `sensitive: true` の値は、`/plugin configure` で入れると MOD の `options` に渡る（2026-10-18、ローカルのマーケットプレイスからインストールして確認）
+- `userConfig` の文字列項目に `options`（選べる値の限定）を付けると、`claude plugin validate` は通るが、マーケットプレイスからインストールした版の読み込みで「Unrecognized key」として拒否される（2026-10-18、Claude Code 2.1.301）。値の確認は MOD の中で行う
+
 ## 未検証
 
-- `userConfig` の `sensitive: true` の値が MOD の `options` に渡るか。開発用 MOD の読み込みでは入力画面が出ず確かめられなかったため、タスク 1 でローカルのマーケットプレイスからインストールする流れで確かめる
 - Jev の日本語での判定精度（1.14 で改善予定とされている）
