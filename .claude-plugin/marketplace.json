@@ -1,0 +1,13 @@
+{
+  "name": "zu-de-clemens",
+  "description": "Claude Code mods that turn conversations into diagrams.",
+  "owner": { "name": "Toriumi" },
+  "plugins": [
+    {
+      "name": "zu-de-clemens",
+      "description": "Suggests a diagram when one would help, and draws it in a side pane with D2 when you ask.",
+      "source": "./plugins/zu-de-clemens",
+      "category": "productivity"
+    }
+  ]
+}

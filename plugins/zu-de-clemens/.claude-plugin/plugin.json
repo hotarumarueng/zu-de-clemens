@@ -1,0 +1,54 @@
+{
+  "name": "zu-de-clemens",
+  "version": "0.1.0",
+  "description": "Suggests a diagram when one would help, and draws it in a side pane with D2 when you ask.",
+  "author": {
+    "name": "Toriumi"
+  },
+  "license": "MIT",
+  "keywords": [
+    "diagram",
+    "d2",
+    "mod",
+    "pane"
+  ],
+  "userConfig": {
+    "typesafe_api_key": {
+      "type": "string",
+      "title": "TypeSafe API key",
+      "description": "API key for Jev (TypeSafe). Get one from the TypeSafe console.",
+      "sensitive": true
+    },
+    "threshold": {
+      "type": "number",
+      "title": "Suggestion threshold",
+      "description": "Jev probability (0-1) at or above which a diagram is suggested.",
+      "default": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "auto_mode": {
+      "type": "boolean",
+      "title": "Auto mode (not recommended)",
+      "description": "Draw diagrams without asking. Uses Claude every time Jev is above the threshold.",
+      "default": false
+    },
+    "image_check": {
+      "type": "boolean",
+      "title": "Diagram check (experimental)",
+      "description": "Show each drawn diagram to Jev as an image and redraw it when it fails the check.",
+      "default": false
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Language of the pane. auto follows the conversation.",
+      "options": [
+        "auto",
+        "ja",
+        "en"
+      ],
+      "default": "auto"
+    }
+  }
+}

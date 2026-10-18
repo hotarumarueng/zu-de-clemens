@@ -1,0 +1,4 @@
+.DS_Store
+.superpowers/
+plugins/zu-de-clemens/.claude-plugin/types/
+evals/.env
