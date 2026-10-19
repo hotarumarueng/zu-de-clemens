@@ -111,3 +111,34 @@ test('fork への指示に、候補の種類の見本と返す形が入る', asy
   expect(prompts[0]!.includes('KIND:')).toBe(true)
   expect(prompts[0]!.includes('RECOMMEND:')).toBe(true)
 })
+
+test('検品なしのときは PNG を作らない', async () => {
+  const { io } = fakeIO([{ text: GOOD }])
+  let pngs = 0
+  const r = await draw({ ...io, png: async () => { pngs++; return 'PNG' } }, input)
+  expect(r.ok).toBe(true)
+  expect(pngs).toBe(0)
+})
+
+test('検品で不合格なら、理由を添えて書き直させる', async () => {
+  const { io, prompts } = fakeIO([{ text: GOOD }, { text: GOOD }])
+  const results = [{ ok: false as const, problem: 'some labels or boxes overlap' }, { ok: true as const }]
+  const r = await draw({ ...io, png: async () => 'PNG' }, { ...input, check: async () => results.shift()! })
+  expect(r.ok).toBe(true)
+  expect(prompts.length).toBe(2)
+  expect(prompts[1]!.includes('some labels or boxes overlap')).toBe(true)
+})
+
+test('検品が skipped なら、そのまま図を返す', async () => {
+  const { io, prompts } = fakeIO([{ text: GOOD }])
+  const r = await draw({ ...io, png: async () => 'PNG' }, { ...input, check: async () => ({ ok: 'skipped' as const }) })
+  expect(r.ok).toBe(true)
+  expect(prompts.length).toBe(1)
+})
+
+test('2 回目も検品で不合格なら、図はそのまま返す', async () => {
+  const { io, prompts } = fakeIO([{ text: GOOD }, { text: GOOD }])
+  const r = await draw({ ...io, png: async () => 'PNG' }, { ...input, check: async () => ({ ok: false as const, problem: 'overlap' }) })
+  expect(r.ok).toBe(true)
+  expect(prompts.length).toBe(2)
+})

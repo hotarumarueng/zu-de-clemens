@@ -2,6 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PluginOptions, Register } from 'claude-code'
 
 import type { View } from '../types'
+import type { DiagramKind } from './catalog'
+import { checkFigure } from './check'
 import { draw } from './draw'
 import type { DrawIO } from './draw'
 import { judge } from './jev'
@@ -26,6 +28,14 @@ const jevIO = ($: EngineInterface): JevIO => ({
 const drawIO = ($: EngineInterface): DrawIO => ({
   fork: prompt => $.model.fork({ prompt }),
   run: (argv, init) => $.process.run(argv, init),
+  // 標準出力で受けるとバイト列が壊れるため、データ置き場のファイルに書かせてバイトで読む
+  png: async d2 => {
+    const path = `${(await $.env.get('HOME')) ?? ''}/.claude/plugins/data/zu-de-clemens/check.png`
+    const made = await $.process.run(['d2', '--layout=elk', '--theme', '0', '--pad', '20', '-', path], { stdin: d2, timeoutMs: 10_000 })
+    if (made.exitCode !== 0) return undefined
+    const read = await $.fs.read(path, { as: 'bytes' })
+    return typeof read === 'string' ? undefined : read.base64
+  },
 })
 const logIO = ($: EngineInterface): LogIO => ({
   read: path => $.fs.read(path).catch(() => undefined),
@@ -33,7 +43,7 @@ const logIO = ($: EngineInterface): LogIO => ({
   log: text => $.ui.log(text, { to: 'debug' }),
 })
 
-type Options = { key: string; threshold: number; auto: boolean; language: string }
+type Options = { key: string; threshold: number; auto: boolean; imageCheck: boolean; language: string }
 
 function readOptions(options: PluginOptions): Options {
   const threshold = Number(options.threshold)
@@ -41,6 +51,7 @@ function readOptions(options: PluginOptions): Options {
     key: typeof options.typesafe_api_key === 'string' ? options.typesafe_api_key.trim() : '',
     threshold: Number.isFinite(threshold) && threshold >= 0 && threshold <= 1 ? threshold : 0.5,
     auto: options.auto_mode === true,
+    imageCheck: options.image_check === true,
     language: typeof options.language === 'string' ? options.language : 'auto',
   }
 }
@@ -81,6 +92,7 @@ async function startDraw($: EngineInterface, options: Options, seq: number) {
     text: current.text ?? '',
     candidates: (current.candidates ?? []) as never,
     lang: current.lang,
+    ...(options.imageCheck ? { check: (png: string, kind: DiagramKind) => checkFigure(jevIO($), { key: options.key, png, kind }) } : {}),
   })
   if ((await read($, view)).seq !== seq) return
   if (result.ok) {

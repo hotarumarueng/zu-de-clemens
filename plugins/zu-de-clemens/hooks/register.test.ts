@@ -9,6 +9,7 @@ const QUESTION = { question: 'A案とB案のどちら？', header: '案', multiS
 
 type World = {
   fetches: number
+  imageFetches: number
   forks: number
   toasts: string[]
   files: Map<string, string>
@@ -26,13 +27,18 @@ type World = {
 // プラグインが使う外部の呼び出しを、すべてテスト側で受ける。
 function world(on: On, over: Partial<World> = {}) {
   const w: World = {
-    fetches: 0, forks: 0, toasts: [], files: new Map(), surfaces: ['desktop'], placed: true,
+    fetches: 0, imageFetches: 0, forks: 0, toasts: [], files: new Map(), surfaces: ['desktop'], placed: true,
     noul: 0.8, jevStatus: 200, forkReply: GOOD_REPLY, opens: 0, surfacesThrow: false, ...over,
   }
   const clock = mock.clock(on)
   on('http.fetch', async (_$, e) => {
-    w.fetches++
     const body = JSON.parse(String(e.init?.body))
+    if (body.assets) {
+      w.imageFetches++
+      const ok = { overlap: { noul: 0.1 }, one_direction: { noul: 0.9 }, diagram_kind: { probabilities: { flow: 0.9 } } }
+      return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ answers: ok }) } }
+    }
+    w.fetches++
     const answers = 'session_summary' in body.questions
       ? { session_summary: { type: 'noul', noul: w.noul } }
       : { needs_diagram: { type: 'noul', noul: w.noul }, diagram_kind: { type: 'choice', probabilities: { flow: 0.7, layers: 0.3 } } }
@@ -49,6 +55,7 @@ function world(on: On, over: Partial<World> = {}) {
     return { value: { exitCode: 0, stdout: out, stderr: '' } }
   })
   on('fs.read', async (_$, e) => {
+    if (e.path.endsWith('.png')) return { value: { base64: 'iVBORw0KGgoAAAANSUhEUgAAAZAAAAEsCAIAAABi1XKV' } as never }
     if (!w.files.has(e.path)) throw new Error('missing')
     return { value: w.files.get(e.path)! }
   })
@@ -230,4 +237,25 @@ test('描いている途中に次のきっかけが来たら、古い結果は�
   await pressing
   await settle()
   expect(await ui.find({ text: /古い図/ })).toBe(undefined)
+})
+
+test('図の検品が ON のときだけ、描いた図を画像で Jev に見せる', { options: { ...OPTIONS, image_check: true } }, async ($, on) => {
+  const { w, settle } = world(on)
+  await ask($)
+  await settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await settle()
+  expect(w.imageFetches).toBe(1)
+  expect(await ui.find({ text: /流れの図/ })).toBeDefined()
+})
+
+test('図の検品が OFF なら画像を送らない', { options: OPTIONS }, async ($, on) => {
+  const { w, settle } = world(on)
+  await ask($)
+  await settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await settle()
+  expect(w.imageFetches).toBe(0)
 })

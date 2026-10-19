@@ -1,6 +1,7 @@
 import type { ModelForkResult, ProcessRunInit, ProcessRunResult } from 'claude-code'
 
 import { kindById } from './catalog'
+import type { CheckResult } from './check'
 import type { DiagramKind } from './catalog'
 import type { TriggerKind } from './jev'
 
@@ -8,6 +9,8 @@ import type { TriggerKind } from './jev'
 export type DrawIO = {
   fork: (prompt: string) => Promise<ModelForkResult>
   run: (argv: readonly string[], init?: ProcessRunInit) => Promise<ProcessRunResult>
+  /** 図の検品用に、D2 から PNG（base64）を作る。作れなければ undefined */
+  png?: (d2: string) => Promise<string | undefined>
 }
 
 export type Figure = { kind: DiagramKind; title: string; recommend?: string; svg: string; ascii: string; d2: string }
@@ -87,7 +90,14 @@ async function findD2(io: DrawIO): Promise<string | undefined> {
   return undefined
 }
 
-type DrawInput = { trigger: TriggerKind; text: string; candidates: { id: DiagramKind; p: number }[]; lang: 'ja' | 'en' }
+type DrawInput = {
+  trigger: TriggerKind
+  text: string
+  candidates: { id: DiagramKind; p: number }[]
+  lang: 'ja' | 'en'
+  /** 図の検品（実験機能）。渡されたときだけ PNG を作って確かめる */
+  check?: (png: string, kind: DiagramKind) => Promise<CheckResult>
+}
 
 export async function draw(io: DrawIO, input: DrawInput): Promise<DrawResult> {
   const d2 = await findD2(io)
@@ -118,6 +128,14 @@ export async function draw(io: DrawIO, input: DrawInput): Promise<DrawResult> {
       const svg = await io.run([d2, '--layout=elk', '--theme', '0', '--dark-theme', '200', '--scale', '1', '--pad', '20', '-', '-'], { stdin: parsed.d2, timeoutMs: RUN_TIMEOUT_MS })
       const ascii = await io.run([d2, '--layout=elk', '--stdout-format', 'ascii', '-', '-'], { stdin: parsed.d2, timeoutMs: RUN_TIMEOUT_MS })
       if (svg.exitCode !== 0 || ascii.exitCode !== 0) return { ok: false, reason: 'd2-failed' }
+      if (input.check && io.png && attempt < ATTEMPTS - 1) {
+        const png = await io.png(parsed.d2)
+        const checked = png ? await input.check(png, parsed.kind as DiagramKind) : { ok: 'skipped' as const }
+        if (checked.ok === false) {
+          feedback = `the drawn diagram failed a visual check: ${checked.problem}`
+          continue
+        }
+      }
       return {
         ok: true,
         figure: {

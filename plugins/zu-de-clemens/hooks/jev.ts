@@ -51,7 +51,7 @@ const SESSION_SUMMARY = {
 }
 
 const tail = (text: string, max: number) => (text.length <= max ? text : text.slice(-max))
-const isProbability = (value: unknown): value is number =>
+export const isProbability = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
 
 function buildBody(trigger: TriggerKind, text: string, recentPrompts: string[]) {
@@ -90,18 +90,21 @@ function parse(trigger: TriggerKind, text: string): Judgement {
   return { ok: true, needsDiagram: p, kinds }
 }
 
-export async function judge(
+/** Jev に 1 回問い合わせる。10 秒で打ち切り、再試行しない。失敗の理由だけを返し、キーは返さない */
+export async function callJev(
   io: JevIO,
-  input: { key: string; trigger: TriggerKind; text: string; recentPrompts: string[] },
-): Promise<Judgement> {
+  key: string,
+  body: object,
+  extraHeaders: Record<string, string> = {},
+): Promise<{ ok: true; text: string } | { ok: false; reason: 'unauthorized' | 'unavailable' }> {
   const stop = new AbortController()
   const timeout = io.sleep(TIMEOUT_MS, stop.signal).then(() => 'timeout' as const, () => 'cancelled' as const)
   try {
     const response = await Promise.race([
       io.fetch(ENDPOINT, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${input.key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildBody(input.trigger, input.text, input.recentPrompts)),
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...extraHeaders },
+        body: JSON.stringify(body),
       }),
       timeout,
     ])
@@ -117,7 +120,7 @@ export async function judge(
       io.log(`jev: HTTP ${response.status}`)
       return { ok: false, reason: 'unavailable' }
     }
-    return parse(input.trigger, response.text)
+    return { ok: true, text: response.text }
   } catch {
     // 例外の文にはリクエストの中身（キーを含む）が載りうるので、ログには種類だけを書く。
     io.log('jev: request failed')
@@ -125,4 +128,12 @@ export async function judge(
   } finally {
     stop.abort()
   }
+}
+
+export async function judge(
+  io: JevIO,
+  input: { key: string; trigger: TriggerKind; text: string; recentPrompts: string[] },
+): Promise<Judgement> {
+  const response = await callJev(io, input.key, buildBody(input.trigger, input.text, input.recentPrompts))
+  return response.ok ? parse(input.trigger, response.text) : response
 }
