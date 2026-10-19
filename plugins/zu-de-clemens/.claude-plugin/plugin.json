@@ -23,7 +23,7 @@
       "type": "number",
       "title": "Suggestion threshold",
       "description": "Jev probability (0-1) at or above which a diagram is suggested.",
-      "default": 0.5,
+      "default": 0.6,
       "min": 0,
       "max": 1
     },

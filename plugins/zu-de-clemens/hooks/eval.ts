@@ -51,7 +51,7 @@ export async function runEval(io: JevIO, key: string, cases: (Case & { label: 'w
 
 const pct = (n: number, d: number) => (d === 0 ? '—' : `${Math.round((n / d) * 100)}%`)
 
-/** results.md の本文と、見逃し率 10% 以下で最も高いしきい値 */
+/** results.md の本文と、見逃し率 10% 以下の中で外れ（見逃し＋空振り）が最も少ないしきい値 */
 export function report(outcomes: Outcome[], meta: { at: string; model: string }): { markdown: string; threshold?: number } {
   const answered = outcomes.filter(o => o.p !== undefined)
   const want = answered.filter(o => o.label === 'want')
@@ -61,7 +61,10 @@ export function report(outcomes: Outcome[], meta: { at: string; model: string })
     const falseAlarms = no.filter(o => o.p! >= t / 100).length
     return { t, missed, falseAlarms }
   })
-  const best = rows.filter(r => want.length > 0 && r.missed / want.length <= MAX_MISS).at(-1)
+  // 外れの数が同じなら、提案が少なく済む高いほうを選ぶ
+  const best = rows
+    .filter(r => want.length > 0 && r.missed / want.length <= MAX_MISS)
+    .reduce<typeof rows[number] | undefined>((b, r) => (!b || r.missed + r.falseAlarms <= b.missed + b.falseAlarms ? r : b), undefined)
   const kinded = want.filter(o => o.kind)
   const hits = kinded.filter(o => o.kinds.slice(0, 3).includes(o.kind!)).length
   const failed = outcomes.filter(o => o.p === undefined)

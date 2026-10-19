@@ -52,7 +52,7 @@ function readOptions(options: PluginOptions): Options {
   const threshold = Number(options.threshold)
   return {
     key: typeof options.typesafe_api_key === 'string' ? options.typesafe_api_key.trim() : '',
-    threshold: Number.isFinite(threshold) && threshold >= 0 && threshold <= 1 ? threshold : 0.5,
+    threshold: Number.isFinite(threshold) && threshold >= 0 && threshold <= 1 ? threshold : 0.6,
     auto: options.auto_mode === true,
     imageCheck: options.image_check === true,
     language: typeof options.language === 'string' ? options.language : 'auto',
