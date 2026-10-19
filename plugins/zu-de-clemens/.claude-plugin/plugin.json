@@ -45,5 +45,6 @@
       "description": "Language of the pane: auto, ja or en. auto follows the conversation.",
       "default": "auto"
     }
-  }
+  },
+  "types": "./types/index.d.ts"
 }

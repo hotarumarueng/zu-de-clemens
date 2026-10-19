@@ -11,7 +11,7 @@ export type LogIO = {
 export type LogEntry = {
   at: string
   trigger: TriggerKind
-  probability: number
+  probability?: number
   candidates: DiagramKind[]
   reaction: 'accepted' | 'dismissed' | 'ignored' | 'auto' | 'not-shown'
   figure?: { kind: DiagramKind; title: string }
@@ -39,7 +39,7 @@ function format(entry: LogEntry): string {
   return [
     `## ${entry.at} ${entry.trigger}`,
     '',
-    `- probability: ${entry.probability.toFixed(2)}`,
+    `- probability: ${entry.probability === undefined ? "-" : entry.probability.toFixed(2)}`,
     `- candidates: ${entry.candidates.join(', ') || '-'}`,
     `- reaction: ${entry.reaction}`,
     ...(entry.figure ? [`- figure: ${entry.figure.kind}「${oneLine(entry.figure.title)}」`] : []),

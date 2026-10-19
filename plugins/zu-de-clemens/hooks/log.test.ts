@@ -56,3 +56,9 @@ test('書き込みに失敗しても例外を投げず、ログに 1 行残す',
   await appendLog(io, place, entry())
   expect(logs.length).toBe(1)
 })
+
+test('確率のない記録（表示されなかった）は - と書く', async () => {
+  const { io, files } = fakeFs()
+  await appendLog(io, place, entry({ probability: undefined, candidates: [], reaction: 'not-shown', figure: undefined }))
+  expect(files.get(logPath(place))!.includes('- probability: -')).toBe(true)
+})
