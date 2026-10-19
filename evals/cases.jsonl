@@ -1,0 +1,30 @@
+{"id":"c01","trigger":"question","text":"DB はどれにしますか？\n1. DynamoDB：サーバーレスで安い\n2. RDS（PostgreSQL）：SQL が使える\n3. Aurora Serverless：自動で伸縮","recent_prompts":[],"label":"want","kind":"comparison"}
+{"id":"c02","trigger":"question","text":"コミットメッセージは日本語と英語のどちらにしますか？\n1. 日本語\n2. 英語","recent_prompts":[],"label":"no","kind":null}
+{"id":"c03","trigger":"question","text":"認証の方式はどれにしますか？\n1. Cognito でユーザープールを作る\n2. Auth0 を使う\n3. 自前で JWT を発行する","recent_prompts":[],"label":"want","kind":"comparison"}
+{"id":"c04","trigger":"question","text":"このファイル名でよいですか？\n1. はい\n2. いいえ、変える","recent_prompts":[],"label":"no","kind":null}
+{"id":"c05","trigger":"question","text":"ログの保存先はどこにしますか？\n1. CloudWatch Logs に直接送る\n2. S3 に貯めて Athena で読む\n3. Firehose 経由で OpenSearch に入れる","recent_prompts":[],"label":"want","kind":"comparison"}
+{"id":"c06","trigger":"question","text":"テストを今回足しますか？\n1. 足す\n2. あとで","recent_prompts":[],"label":"no","kind":null}
+{"id":"c07","trigger":"question","text":"モノレポにするか、リポジトリを分けますか？\n1. モノレポ（フロント・API・インフラを 1 つに）\n2. 3 つに分ける","recent_prompts":[],"label":"want","kind":"comparison"}
+{"id":"c08","trigger":"answer","text":"IAM のポリシーは、ユーザーやロールに付けたものと、リソース側に付けたもの（バケットポリシーなど）の両方で評価されます。どちらかで明示的に拒否されると、もう片方で許可されていても拒否になります。さらに、組織の SCP が上限を決めます。","recent_prompts":[],"label":"want","kind":"decision"}
+{"id":"c09","trigger":"answer","text":"はい、そのコマンドで大丈夫です。","recent_prompts":[],"label":"no","kind":null}
+{"id":"c10","trigger":"answer","text":"リクエストはまず CloudFront に届き、静的ファイルなら S3 から返します。API のパスなら API Gateway に転送され、Lambda が DynamoDB を読んで結果を返します。","recent_prompts":[],"label":"want","kind":"flow"}
+{"id":"c11","trigger":"answer","text":"D2 は、図をテキストで書くための言語です。箱と矢印の関係を書くと、ツールが図に変えてくれます。","recent_prompts":[],"label":"no","kind":null}
+{"id":"c12","trigger":"answer","text":"ログインの確認を1つの関数にまとめて、トップページと設定ページの両方から呼ぶようにしました。","recent_prompts":[],"label":"want","kind":"hub"}
+{"id":"c13","trigger":"answer","text":"VPC の中にパブリックサブネットとプライベートサブネットを作り、ALB はパブリック、ECS のタスクと RDS はプライベートに置きます。プライベートからの外向き通信は NAT Gateway を通します。","recent_prompts":[],"label":"want","kind":"containment"}
+{"id":"c14","trigger":"answer","text":"エラーの原因は、環境変数の名前の打ち間違いでした。TYPESAFE_APIKEY を TYPESAFE_API_KEY に直せば動きます。","recent_prompts":[],"label":"no","kind":null}
+{"id":"c15","trigger":"prompt","text":"今このセッションどうなってる？","recent_prompts":[],"label":"want","kind":"status"}
+{"id":"c16","trigger":"prompt","text":"話があちこち行ったけど、結局何が決まった？","recent_prompts":[],"label":"want","kind":"status"}
+{"id":"c17","trigger":"prompt","text":"D2って何？","recent_prompts":[],"label":"no","kind":null}
+{"id":"c18","trigger":"prompt","text":"A案で進めて","recent_prompts":[],"label":"no","kind":null}
+{"id":"c19","trigger":"prompt","text":"どこまで終わったっけ","recent_prompts":[],"label":"want","kind":"status"}
+{"id":"c20","trigger":"prompt","text":"この関数のエラーどうなってる？","recent_prompts":[],"label":"no","kind":null}
+{"id":"c21","trigger":"question","text":"Which queue should we use?\n1. SQS standard\n2. SQS FIFO\n3. EventBridge","recent_prompts":[],"label":"want","kind":"comparison"}
+{"id":"c22","trigger":"question","text":"Should I run the formatter now?\n1. Yes\n2. No","recent_prompts":[],"label":"no","kind":null}
+{"id":"c23","trigger":"answer","text":"A request first hits the load balancer, which forwards it to one of three app servers. Each app server reads from a shared Redis cache and falls back to Postgres on a miss; writes go to Postgres and invalidate the cache.","recent_prompts":[],"label":"want","kind":"flow"}
+{"id":"c24","trigger":"answer","text":"Done. I renamed the variable.","recent_prompts":[],"label":"no","kind":null}
+{"id":"c25","trigger":"answer","text":"Kubernetes namespaces hold deployments, which create replica sets, which create pods; a service selects pods by label and an ingress routes outside traffic to services.","recent_prompts":[],"label":"want","kind":"containment"}
+{"id":"c26","trigger":"answer","text":"The test failed because the fixture date was in the past.","recent_prompts":[],"label":"no","kind":null}
+{"id":"c27","trigger":"prompt","text":"Where are we with this session?","recent_prompts":[],"label":"want","kind":"status"}
+{"id":"c28","trigger":"prompt","text":"What is a VPC?","recent_prompts":[],"label":"no","kind":null}
+{"id":"c29","trigger":"prompt","text":"Can you summarize what we decided and what is still open?","recent_prompts":[],"label":"want","kind":"status"}
+{"id":"c30","trigger":"prompt","text":"Run the tests again","recent_prompts":[],"label":"no","kind":null}

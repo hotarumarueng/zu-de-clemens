@@ -80,6 +80,8 @@ function world(on: On, over: Partial<World> = {}) {
   on('ui.log', async () => ({ value: undefined }))
   on('tool.call', { tool: 'AskUserQuestion' }, async () => ({ result: { answers: { [QUESTION.question]: 'B案' } } as never }))
   on('turn.complete', async () => ({ text: '' }))
+  on('command.register', async (_$, e) => ({ value: { command: e.name } }))
+  on('session.start', async () => ({ cwd: '/home/u/app' }))
   const settle = () => clock.advance(0)
   const log = () => [...w.files.values()].join('\n')
   return { w, settle, log }
@@ -258,4 +260,38 @@ test('図の検品が OFF なら画像を送らない', { options: OPTIONS }, as
   await ui.press({ key: 'draw' })
   await settle()
   expect(w.imageFetches).toBe(0)
+})
+
+const CASES = '/home/u/app/evals/cases.jsonl'
+const evalCase = (id: string, label: string | null) =>
+  JSON.stringify({ id, trigger: 'question', text: 'A案とB案のどちら？', recent_prompts: [], label, kind: label === 'want' ? 'flow' : null })
+const runEvalCommand = async ($: any) => {
+  await $.session.start({ cwd: '/home/u/app' } as never)
+  return $.command.run({ command: 'zu-de-clemens-eval' })
+}
+
+test('評価コマンドは設定済みのキーで各件を Jev に聞き、results.md を書く', { options: OPTIONS }, async ($, on) => {
+  const { w } = world(on)
+  w.files.set(CASES, [evalCase('c01', 'want'), evalCase('c02', 'no')].join('\n'))
+  const ran = await runEvalCommand($)
+  expect(w.fetches).toBe(2)
+  const results = w.files.get('/home/u/app/evals/results.md')!
+  expect(results.includes('| c01 | want | 0.80 | flow | flow, layers |')).toBe(true)
+  expect(String(ran.text).includes('results.md')).toBe(true)
+})
+
+test('評価コマンドは、ラベルのない件があれば Jev に聞かない', { options: OPTIONS }, async ($, on) => {
+  const { w } = world(on)
+  w.files.set(CASES, [evalCase('c01', 'want'), evalCase('c02', null)].join('\n'))
+  const ran = await runEvalCommand($)
+  expect(w.fetches).toBe(0)
+  expect(String(ran.text).includes('c02')).toBe(true)
+})
+
+test('評価コマンドは、キーがなければ Jev に聞かない', { options: { ...OPTIONS, typesafe_api_key: '' } }, async ($, on) => {
+  const { w } = world(on)
+  w.files.set(CASES, evalCase('c01', 'want'))
+  const ran = await runEvalCommand($)
+  expect(w.fetches).toBe(0)
+  expect(String(ran.text).includes('/plugin configure')).toBe(true)
 })

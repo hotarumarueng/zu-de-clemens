@@ -64,7 +64,7 @@
 
 **決めてあること:**
 - `plugin.json` の `userConfig`：設計 8 章の 5 項目（`typesafe_api_key` は `sensitive: true`・`required: true`、`threshold` は 0〜1 で既定値は仮に 0.5（タスク 9 で確定）、`auto_mode` と `image_check` は既定 `false`、`language` は `auto`/`ja`/`en`）
-- `.gitignore`：Claude Code が書き出す `plugins/zu-de-clemens/.claude-plugin/types/` と、`evals/.env`
+- `.gitignore`：Claude Code が書き出す `plugins/zu-de-clemens/.claude-plugin/types/`
 - CI：`claude plugin validate .` と `claude plugin validate plugins/zu-de-clemens`、型チェック、`claude plugin test plugins/zu-de-clemens`、カタログの D2 の検査（タスク 2 で追加）。Claude Code を CI で動かす方法はこのタスクで確かめ、動かせない部分は手元での確認手順として README の開発の節に書く
 
 - [ ] **手順 1: 失敗するテストを書く** — `register.test.ts` に「読み込むと例外なく登録が終わる」テストを 1 つ
@@ -258,17 +258,17 @@
 ### タスク 9: 評価データとしきい値（R11、R12）
 
 **ファイル:**
-- 作成: `evals/cases.jsonl`、`evals/run.mjs`、`evals/results.md`、`evals/README.md`
+- 作成: `evals/cases.jsonl`、`evals/results.md`、`plugins/zu-de-clemens/hooks/eval.ts`（と `eval.test.ts`）
 - 変更: `plugins/zu-de-clemens/.claude-plugin/plugin.json`（`threshold` の既定値）
 
 **決めてあること:**
 - 30 件。各件は `{ id, trigger, text, recent_prompts, label: 'want' | 'no', kind? }`。`want` と `no` をおよそ半々、日本語 20 件・英語 10 件。実際の会話は写さず、場面をもとに書き起こす
-- `run.mjs`：キーは `evals/.env`（gitignore 済み）から読む。依存は入れず Node の `fetch` を使う。`jev.ts` と同じ質問・判定条件で投げる（質問の組み立ては `jev.ts` から読み込んで使い、二重に書かない）
+- 開発用のコマンド `/zu-de-clemens-eval`：キーは `/plugin configure` の値だけを使う（キーの置き場所を増やさない）。`jev.ts` の `judge` をそのまま使い、質問を二重に書かない。リポジトリの直下で実行し、ラベルのない件があれば Jev に聞かずに止まる
 - `results.md`：しきい値 0.30〜0.90（0.05 刻み）ごとの見逃し率と空振り率の表、`want` の件で正解の種類が上位 3 つに入った割合、実行日時、モデル名
 - 既定のしきい値：見逃し率 10% 以下の中で最も高い値
 
 - [ ] **手順 1: 作者と評価データを作る** — 作者がラベルを付ける。ラベルは作者が決めるので、実装する人は場面の文案までを用意する
-- [ ] **手順 2: `run.mjs` を書いて実行する**（費用の見込み：30 件 × 約 1,000 トークン ＝ 約 0.2 円）
+- [ ] **手順 2: `/zu-de-clemens-eval` を作って実行する**（費用の見込み：30 件 × 約 1,000 トークン ＝ 約 0.2 円）
 - [ ] **手順 3: 結果から既定のしきい値を決め、`plugin.json` に入れる**
 - [ ] **手順 4: 作者の承認を得てコミットする**
 

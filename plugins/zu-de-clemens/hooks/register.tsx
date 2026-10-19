@@ -6,6 +6,7 @@ import type { DiagramKind } from './catalog'
 import { checkFigure } from './check'
 import { draw } from './draw'
 import type { DrawIO } from './draw'
+import { parseCases, report, runEval } from './eval'
 import { judge } from './jev'
 import type { JevIO, TriggerKind } from './jev'
 import { appendLog } from './log'
@@ -15,6 +16,8 @@ import { detectLang, t } from './strings'
 import type { StringKey } from './strings'
 
 const PANE = 'zu-de-clemens'
+// コマンド名にコロンは使えない（CommandSpec.name）
+const EVAL_COMMAND = 'zu-de-clemens-eval'
 const view = atom({ plugin: 'zu-de-clemens', key: 'view' } as const, { seq: 0, state: 'idle', lang: 'en' } as View)
 const guided = atom({ plugin: 'zu-de-clemens', key: 'guided' } as const, false)
 const prompts = atom({ plugin: 'zu-de-clemens', key: 'prompts' } as const, [] as string[])
@@ -148,6 +151,23 @@ async function consider($: EngineInterface, options: Options, trigger: TriggerKi
   await show($, lang)
 }
 
+// 作者がしきい値を決めるための評価。キーは /plugin configure の値だけを使う（設計 8 章）。
+async function evaluate($: EngineInterface, options: Options): Promise<{ text: string }> {
+  if (!options.key) return { text: 'TypeSafe の API キーが設定されていません。/plugin configure で入れてください。' }
+  const dir = `${await $.session.cwd()}/evals`
+  const source = await $.fs.read(`${dir}/cases.jsonl`).catch(() => undefined)
+  if (typeof source !== 'string') return { text: `${dir}/cases.jsonl が読めません。リポジトリの直下で実行してください。` }
+  const parsed = parseCases(source)
+  if (!parsed.ok) return { text: `cases.jsonl: ${parsed.error}` }
+  const unlabeled = parsed.cases.filter(c => c.label === null).map(c => c.id)
+  if (unlabeled.length > 0) return { text: `ラベルのない件があります：${unlabeled.join(', ')}` }
+  const outcomes = await runEval(jevIO($), options.key, parsed.cases as never)
+  const { markdown, threshold } = report(outcomes, { at: new Date(await $.clock.now()).toISOString(), model: 'jev-latest' })
+  await $.fs.write(`${dir}/results.md`, markdown)
+  const failed = outcomes.filter(o => o.p === undefined).length
+  return { text: `${dir}/results.md に書きました。既定のしきい値の候補：${threshold ?? 'なし'}${failed ? `（Jev が答えなかった件：${failed}）` : ''}` }
+}
+
 // フックは MOD の処理を待たずに次へ進む。MOD の失敗で Claude と利用者を止めない（設計 10 章）。
 function background($: EngineInterface, work: Promise<unknown>) {
   work.catch(() => $.ui.log('zu-de-clemens: background work failed', { to: 'debug' }))
@@ -155,6 +175,13 @@ function background($: EngineInterface, work: Promise<unknown>) {
 
 export const register: Register = (on, rawOptions) => {
   const options = readOptions(rawOptions)
+
+  on('session.start', async ($, e, next) => {
+    await $.command.register({ name: EVAL_COMMAND, description: 'Run the Jev eval on evals/cases.jsonl (for development)' })
+    return next(e)
+  })
+
+  on('command.run', { command: EVAL_COMMAND }, $ => evaluate($, options))
 
   on('tool.call', { tool: 'AskUserQuestion' }, async ($, e, next) => {
     let seq = -1
