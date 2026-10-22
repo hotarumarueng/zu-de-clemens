@@ -17,7 +17,7 @@
 
 | | |
 |---|---|
-| Claude Code | プラグインの function hooks（early access）が使える版。2.1.299（デスクトップアプリ、macOS）で確認。図はデスクトップアプリでは SVG、ターミナルでは文字で出る |
+| Claude Code | プラグインの function hooks（early access）が使える版。2.1.299〜2.1.304（デスクトップアプリ、macOS）で確認。2.1.223 は `hooks.json` の `modules` 形式に対応しておらず読み込めない。`claude --version` で確かめる（nvm などで複数の版が入っていると、ターミナルでは古い版が先に起動することがある）。図はデスクトップアプリでは SVG、ターミナルでは文字で出る |
 | D2 | 0.9.0 以上。`PATH` 上、または `/opt/homebrew/bin`・`/usr/local/bin` |
 | TypeSafe の API キー | Jev 用。必須で、ないと導入の案内だけを出す。[TypeSafe のコンソール](https://console.typesafe.ai/)で取得する |
 

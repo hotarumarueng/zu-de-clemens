@@ -17,7 +17,7 @@ The design, requirements and decision records are in [`docs/`](docs/). The data 
 
 | | |
 |---|---|
-| Claude Code | With plugin function hooks (early access). Tested on 2.1.299 (desktop app, macOS). The diagram is drawn as SVG in the desktop app and as text in the terminal |
+| Claude Code | With plugin function hooks (early access). Tested on 2.1.299 to 2.1.304 (desktop app, macOS). 2.1.223 does not support the `modules` form of `hooks.json` and fails to load the plugin. Check with `claude --version` (with several installs, for example through nvm, the terminal may start an older one first). The diagram is drawn as SVG in the desktop app and as text in the terminal |
 | D2 | 0.9.0 or later, on `PATH` or in `/opt/homebrew/bin` or `/usr/local/bin` |
 | TypeSafe API key | For Jev. Required: without it the plugin only shows a setup notice. Get one at the [TypeSafe console](https://console.typesafe.ai/) |
 
