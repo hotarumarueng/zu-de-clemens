@@ -67,6 +67,8 @@ Just keep working. When a moment scores at or above the threshold, the pane open
 
 The pane buttons work while the question dialog is open, so you can look at the diagram before you answer.
 
+![Asking "what was I doing?" draws the session's progress: topics, decisions and what is still open](docs/images/session-summary.webp)
+
 ## Settings
 
 Change them with `/plugin configure`.
