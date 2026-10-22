@@ -9,6 +9,8 @@ const QUESTION = { question: 'A案とB案のどちら？', header: '案', multiS
 
 type World = {
   fetches: number
+  /** 最後に Jev に送った判定対象の文 */
+  sentText?: string
   imageFetches: number
   forks: number
   toasts: string[]
@@ -39,6 +41,7 @@ function world(on: On, over: Partial<World> = {}) {
       return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ answers: ok }) } }
     }
     w.fetches++
+    w.sentText = body.state?.target?.text
     const answers = 'session_summary' in body.questions
       ? { session_summary: { type: 'noul', noul: w.noul } }
       : { needs_diagram: { type: 'noul', noul: w.noul }, diagram_kind: { type: 'choice', probabilities: { flow: 0.7, layers: 0.3 } } }
@@ -111,13 +114,15 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
-test('確率がしきい値未満なら何も出ず、fork も呼ばれない', { options: OPTIONS }, async ($, on) => {
-  const { w, settle } = world(on, { noul: 0.3 })
+test('確率がしきい値未満なら何も出ず、fork も呼ばれない。回答ログに below と確率が残る', { options: OPTIONS }, async ($, on) => {
+  const { w, settle, log } = world(on, { noul: 0.3 })
   await ask($)
   await settle()
   const ui = await mountPane($, 'desktop')
   expect(await ui.find({ key: 'draw' })).toBe(undefined)
   expect(w.forks).toBe(0)
+  expect(log().includes('- reaction: below')).toBe(true)
+  expect(log().includes('- probability: 0.30')).toBe(true)
 })
 
 test('［今回はいらない］で提案が消え、回答ログに dismissed が残る', { options: OPTIONS }, async ($, on) => {
@@ -167,8 +172,8 @@ test('オートモードでは、提案を経ずに fork が呼ばれる', { opt
   expect(log().includes('- reaction: auto')).toBe(true)
 })
 
-test('キーがなければ案内を 1 回だけ出し、Jev には聞かない', { options: { ...OPTIONS, typesafe_api_key: '' } }, async ($, on) => {
-  const { w, settle } = world(on)
+test('キーがなければ案内を 1 回だけ出し、Jev には聞かない。回答ログに no-key が残る', { options: { ...OPTIONS, typesafe_api_key: '' } }, async ($, on) => {
+  const { w, settle, log } = world(on)
   await ask($)
   await settle()
   await complete($)
@@ -177,16 +182,18 @@ test('キーがなければ案内を 1 回だけ出し、Jev には聞かない'
   expect(w.opens).toBe(1)
   const ui = await mountPane($, 'desktop')
   expect(await ui.find({ text: /API キーが設定されていません/ })).toBeDefined()
+  expect(log().includes('- reaction: no-key')).toBe(true)
 })
 
-test('Jev が 503 なら何も出さず、質問の結果はそのまま返る', { options: OPTIONS }, async ($, on) => {
-  const { w, settle } = world(on, { jevStatus: 503 })
+test('Jev が 503 なら何も出さず、質問の結果はそのまま返る。回答ログに jev-unavailable が残る', { options: OPTIONS }, async ($, on) => {
+  const { w, settle, log } = world(on, { jevStatus: 503 })
   const ran = await ask($)
   await settle()
   expect((ran as any).result.answers[QUESTION.question]).toBe('B案')
   const ui = await mountPane($, 'desktop')
   expect(await ui.find({ key: 'draw' })).toBe(undefined)
   expect(w.forks).toBe(0)
+  expect(log().includes('- reaction: jev-unavailable')).toBe(true)
 })
 
 test('ペインが置かれなければトーストで知らせる', { options: OPTIONS }, async ($, on) => {
@@ -204,11 +211,12 @@ test('画面がつながっていなければ Jev に聞かず、not-shown を�
   expect(log().includes('- reaction: not-shown')).toBe(true)
 })
 
-test('MOD の中で例外が起きても、質問の結果はそのまま返る', { options: OPTIONS }, async ($, on) => {
-  const { settle } = world(on, { surfacesThrow: true })
+test('MOD の中で例外が起きても、質問の結果はそのまま返る。回答ログに error が残る', { options: OPTIONS }, async ($, on) => {
+  const { settle, log } = world(on, { surfacesThrow: true })
   const ran = await ask($)
   await settle()
   expect((ran as any).result.answers[QUESTION.question]).toBe('B案')
+  expect(log().includes('- reaction: error')).toBe(true)
 })
 
 test('提案中に次のきっかけが来たら ignored を記録する', { options: OPTIONS }, async ($, on) => {
@@ -294,4 +302,70 @@ test('評価コマンドは、キーがなければ Jev に聞かない', { opti
   const ran = await runEvalCommand($)
   expect(w.fetches).toBe(0)
   expect(String(ran.text).includes('/plugin configure')).toBe(true)
+})
+
+test('Claude の質問を判定するとき、選択肢の説明まで Jev に渡す', { options: OPTIONS }, async ($, on) => {
+  const { w, settle } = world(on)
+  await ask($)
+  await settle()
+  expect(w.sentText).toBe('A案とB案のどちら？\n1. A案: a\n2. B案: b')
+})
+
+test('図を出したあと、次のきっかけで提案が出なければ図は残る', { options: OPTIONS }, async ($, on) => {
+  const { w, settle } = world(on)
+  await ask($)
+  await settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await settle()
+  w.noul = 0.3
+  await complete($)
+  await settle()
+  expect(await ui.find({ text: /流れの図/ })).toBeDefined()
+})
+
+test('描いている途中に次のきっかけが来ても、提案が出なければ描き終えた図を出す', { options: OPTIONS }, async ($, on) => {
+  let release = () => {}
+  const { w, settle } = world(on, {
+    fork: async () => {
+      await new Promise<void>(resolve => { release = resolve })
+      return GOOD_REPLY
+    },
+  })
+  await ask($)
+  await settle()
+  const ui = await mountPane($, 'desktop')
+  const pressing = ui.press({ key: 'draw' })
+  await settle()
+  w.noul = 0.3
+  await complete($)
+  await settle()
+  release()
+  await pressing
+  await settle()
+  expect(await ui.find({ text: /流れの図/ })).toBeDefined()
+})
+
+test('入力のときに画面があれば、応答の終わりに画面が空と返っても提案を出す', { options: OPTIONS }, async ($, on) => {
+  const { w, settle } = world(on)
+  on('prompt.submit', async (_$, e) => ({ text: e.text }) as never)
+  await $.prompt.submit({ text: 'リクエストの流れを説明して' } as never)
+  await settle()
+  w.surfaces = []
+  await complete($)
+  await settle()
+  expect(w.fetches).toBe(2)
+  const ui = await mountPane($, 'desktop')
+  expect(await ui.find({ key: 'draw' })).toBeDefined()
+})
+
+test('入力のときにも画面がなければ（claude -p など）、応答の終わりも Jev に聞かない', { options: OPTIONS }, async ($, on) => {
+  const { w, settle, log } = world(on, { surfaces: [] })
+  on('prompt.submit', async (_$, e) => ({ text: e.text }) as never)
+  await $.prompt.submit({ text: 'リクエストの流れを説明して' } as never)
+  await settle()
+  await complete($)
+  await settle()
+  expect(w.fetches).toBe(0)
+  expect(log().split('- reaction: not-shown').length - 1).toBe(2)
 })

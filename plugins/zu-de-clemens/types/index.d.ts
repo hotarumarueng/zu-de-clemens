@@ -4,6 +4,8 @@ export type View = {
   /** きっかけの通し番号。今の値と違う結果は表示しない */
   seq: number
   state: ViewState
+  /** 描き始めたときの seq。描き終えたとき、まだ自分の描画が表示中かを見分ける */
+  drawId?: number
   trigger?: 'question' | 'answer' | 'prompt'
   lang: 'ja' | 'en'
   text?: string
@@ -24,6 +26,8 @@ declare module 'claude-code' {
       guided: boolean
       /** 利用者の直近の入力（新しいものが末尾） */
       prompts: string[]
+      /** 利用者の直近の入力のときに、セッションを映す画面があったか */
+      watched: boolean
     }
   }
 }

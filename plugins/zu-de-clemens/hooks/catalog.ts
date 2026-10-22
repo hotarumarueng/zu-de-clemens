@@ -77,7 +77,7 @@ account.policy -> account.vpc.subnet.server: allows`,
     id: 'hub',
     name: { ja: 'ハブ', en: 'Hub' },
     when: { ja: '1 か所に集まり、そこから配られる', en: 'Things gather in one place and fan out' },
-    sample: `direction: right
+    sample: `direction: down
 a: Source A
 b: Source B
 hub: Hub
@@ -92,7 +92,7 @@ hub -> d`,
     id: 'flow',
     name: { ja: '流れ（DFD）', en: 'Data flow' },
     when: { ja: 'データや処理が順に渡る', en: 'Data or work passes along in order' },
-    sample: `direction: right
+    sample: `direction: down
 input: Input
 process: Process
 store: Store {shape: cylinder}
@@ -103,7 +103,7 @@ input -> process -> store -> output`,
     id: 'swimlane',
     name: { ja: 'スイムレーン', en: 'Swimlane' },
     when: { ja: '誰が、どの順で、何をするか', en: 'Who does what, in which order' },
-    sample: `direction: right
+    sample: `direction: down
 user: User {
   apply: Apply
 }
@@ -156,7 +156,7 @@ c -> a: reports`,
     id: 'steps',
     name: { ja: 'ステップ', en: 'Steps' },
     when: { ja: '段階・手順', en: 'Stages or a procedure' },
-    sample: `direction: right
+    sample: `direction: down
 s1: 1. Plan
 s2: 2. Build
 s3: 3. Check
@@ -183,7 +183,7 @@ post.user_id -> user.id`,
     id: 'status',
     name: { ja: '進み具合', en: 'Status' },
     when: { ja: 'セッションの整理（話題ごとに、決まったこと・残っていること）', en: 'Session summary: per topic, what is decided and what is open' },
-    sample: `direction: right
+    sample: `direction: down
 topic_a: Topic A {
   decided: "Decided: X"
   open: "Open: Y"

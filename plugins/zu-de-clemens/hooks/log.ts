@@ -13,7 +13,8 @@ export type LogEntry = {
   trigger: TriggerKind
   probability?: number
   candidates: DiagramKind[]
-  reaction: 'accepted' | 'dismissed' | 'ignored' | 'auto' | 'not-shown'
+  /** 提案への反応。no-key 以降は提案を出さなかった理由（なぜ出ないのかを利用者が確かめられるように残す） */
+  reaction: 'accepted' | 'dismissed' | 'ignored' | 'auto' | 'not-shown' | 'no-key' | 'below' | 'jev-unauthorized' | 'jev-unavailable' | 'jev-malformed' | 'error'
   figure?: { kind: DiagramKind; title: string }
   question?: string
   answer?: string

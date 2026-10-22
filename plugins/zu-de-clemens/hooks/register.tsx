@@ -21,6 +21,7 @@ const EVAL_COMMAND = 'zu-de-clemens-eval'
 const view = atom({ plugin: 'zu-de-clemens', key: 'view' } as const, { seq: 0, state: 'idle', lang: 'en' } as View)
 const guided = atom({ plugin: 'zu-de-clemens', key: 'guided' } as const, false)
 const prompts = atom({ plugin: 'zu-de-clemens', key: 'prompts' } as const, [] as string[])
+const watched = atom({ plugin: 'zu-de-clemens', key: 'watched' } as const, false)
 
 // 外部とのやりとりは $ を通す。各部品には必要な働きだけを渡す（テストで差し替えるため）。
 const jevIO = ($: EngineInterface): JevIO => ({
@@ -89,7 +90,7 @@ async function guide($: EngineInterface, seq: number, lang: View['lang'], messag
 async function startDraw($: EngineInterface, options: Options, seq: number) {
   const current = await read($, view)
   if (current.seq !== seq || !current.trigger) return
-  await update($, view, v => ({ ...v, state: 'drawing' }))
+  await update($, view, v => ({ ...v, state: 'drawing', drawId: seq }))
   const result = await draw(drawIO($), {
     trigger: current.trigger,
     text: current.text ?? '',
@@ -97,7 +98,9 @@ async function startDraw($: EngineInterface, options: Options, seq: number) {
     lang: current.lang,
     ...(options.imageCheck ? { check: (png: string, kind: DiagramKind) => checkFigure(jevIO($), { key: options.key, png, kind }) } : {}),
   })
-  if ((await read($, view)).seq !== seq) return
+  // 次のきっかけが来ても、新しい提案や案内に置き換わっていなければ描き終えた図を出す
+  const now = await read($, view)
+  if (now.state !== 'drawing' || now.drawId !== seq) return
   if (result.ok) {
     const { d2: _source, ...figure } = result.figure
     await update($, view, v => ({ ...v, state: 'figure', figure }))
@@ -124,25 +127,35 @@ async function consider($: EngineInterface, options: Options, trigger: TriggerKi
   const before = await read($, view)
   const seq = before.seq + 1
   const lang = detectLang(text, options.language)
+  const idle: View = { seq, state: 'idle', lang, trigger, ...extra }
   // キーがなければ、表示中の案内を消さずに抜ける（案内は 1 セッションに 1 回）
-  if (!options.key) return guide($, seq, lang, 'guideNoKey')
+  if (!options.key) {
+    await log($, idle, 'no-key')
+    return guide($, seq, lang, 'guideNoKey')
+  }
   // 提案を出したまま次のきっかけが来たら、放置として記録する
   if (before.state === 'proposal') await log($, before, 'ignored')
-  await update($, view, () => ({ seq, state: 'idle', lang }))
+  // 図と描画中の表示は、次の提案が出るまで残す（読んでいる途中で消さない）
+  await update($, view, v => (v.state === 'figure' || v.state === 'drawing' ? { ...v, seq } : { seq, state: 'idle', lang }))
 
-  if ((await $.session.surfaces()).length === 0) {
-    return log($, { seq, state: 'idle', lang, trigger, ...extra }, 'not-shown')
+  const onScreen = (await $.session.surfaces()).length > 0
+  if (trigger === 'prompt') await update($, watched, () => onScreen)
+  // 応答の終わりには、見ているのに画面が空と返ることがある（2026-10-20 の記録で応答 30 件中 11 件、入力では 0 件）。
+  // 直前の入力のときに画面があれば、見ているとみなす。誰も見ていない実行（claude -p など）では入力の時点で空なので、送らない
+  if (!onScreen && (trigger === 'prompt' || !(await read($, watched)))) {
+    return log($, idle, 'not-shown')
   }
   const judgement = await judge(jevIO($), { key: options.key, trigger, text, recentPrompts: await read($, prompts) })
   if (!judgement.ok) {
+    await log($, idle, `jev-${judgement.reason}`)
     if (judgement.reason === 'unauthorized') await guide($, seq, lang, 'guideBadKey')
     return
   }
   const probability = trigger === 'prompt' ? judgement.sessionSummary : judgement.needsDiagram
-  if (probability === undefined || probability < options.threshold) return
+  const candidates = trigger === 'prompt' ? [{ id: 'status', p: 1 }] : judgement.kinds ?? []
+  if (probability === undefined || probability < options.threshold) return log($, { ...idle, probability, candidates }, 'below')
   if ((await read($, view)).seq !== seq) return
 
-  const candidates = trigger === 'prompt' ? [{ id: 'status', p: 1 }] : judgement.kinds ?? []
   await update($, view, () => ({ seq, state: 'proposal', trigger, lang, text, probability, candidates, ...extra }))
   if (options.auto) {
     await show($, lang)
@@ -169,8 +182,12 @@ async function evaluate($: EngineInterface, options: Options): Promise<{ text: s
 }
 
 // フックは MOD の処理を待たずに次へ進む。MOD の失敗で Claude と利用者を止めない（設計 10 章）。
-function background($: EngineInterface, work: Promise<unknown>) {
-  work.catch(() => $.ui.log('zu-de-clemens: background work failed', { to: 'debug' }))
+// 例外の文はログに書かない（リクエストの中身が載りうるため）。
+function background($: EngineInterface, trigger: TriggerKind, work: Promise<unknown>) {
+  work.catch(() => {
+    $.ui.log('zu-de-clemens: background work failed', { to: 'debug' })
+    return log($, { seq: 0, state: 'idle', lang: 'en', trigger }, 'error')
+  }).catch(() => {})
 }
 
 export const register: Register = (on, rawOptions) => {
@@ -186,10 +203,12 @@ export const register: Register = (on, rawOptions) => {
   on('tool.call', { tool: 'AskUserQuestion' }, async ($, e, next) => {
     let seq = -1
     try {
-      const questions = (e.questions ?? []) as { question: string; options: { label: string }[] }[]
-      const text = questions.map(q => `${q.question}\n${q.options.map((o, i) => `${i + 1}. ${o.label}`).join('\n')}`).join('\n\n')
+      const questions = (e.questions ?? []) as { question: string; options: { label: string; description?: string }[] }[]
+      // 説明まで渡す。名前だけだと短い質問に見え、Jev の確率が下がる（評価データも説明つき）
+      const option = (o: { label: string; description?: string }, i: number) => `${i + 1}. ${o.label}${o.description ? `: ${o.description}` : ''}`
+      const text = questions.map(q => `${q.question}\n${q.options.map(option).join('\n')}`).join('\n\n')
       seq = (await read($, view)).seq + 1
-      background($, consider($, options, 'question', text, { question: questions.map(q => q.question).join(' / ') }))
+      background($, 'question', consider($, options, 'question', text, { question: questions.map(q => q.question).join(' / ') }))
     } catch {
       // 判定を始められなくても、質問はそのまま通す
     }
@@ -208,7 +227,7 @@ export const register: Register = (on, rawOptions) => {
 
   on('turn.complete', async ($, e, next) => {
     try {
-      if (!e.agentId && e.reason === 'answer' && e.answer.trim()) background($, consider($, options, 'answer', e.answer))
+      if (!e.agentId && e.reason === 'answer' && e.answer.trim()) background($, 'answer', consider($, options, 'answer', e.answer))
     } catch {
       // 判定を始められなくても、応答はそのまま通す
     }
@@ -221,7 +240,7 @@ export const register: Register = (on, rawOptions) => {
       const text = e.text.trim()
       if (text && (origin === undefined || origin === 'composer' || origin === 'bridge' || origin === 'sdk')) {
         await update($, prompts, list => [...list, text].slice(-3))
-        background($, consider($, options, 'prompt', text))
+        background($, 'prompt', consider($, options, 'prompt', text))
       }
     } catch {
       // 記録に失敗しても、入力はそのまま通す

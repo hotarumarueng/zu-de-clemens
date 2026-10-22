@@ -47,6 +47,11 @@ export function isSafeD2(d2: string): boolean {
   return !/(^|[\s:{])@|\.\.\.@|icon\s*:|https?:\/\//m.test(d2)
 }
 
+// ペインは縦に長い。横向きの図は幅に合わせて縮められ、文字が読めなくなる（右向きで 1820px 幅になった例がある）
+export function downward(d2: string): string {
+  return `direction: down\n${d2.replace(/^direction:.*$\n?/gm, '')}`
+}
+
 function buildPrompt(input: DrawInput, feedback?: string): string {
   const kinds = input.candidates.slice(0, 3).map(c => kindById(c.id)).filter(k => k !== undefined)
   return [
@@ -63,7 +68,7 @@ function buildPrompt(input: DrawInput, feedback?: string): string {
     }),
     '',
     'Rules:',
-    '- Write D2. Keep the flow in one direction.',
+    '- Write D2. Lay it out top to bottom (direction: down); the pane is tall and narrow.',
     '- At most 12 boxes. Labels at most 20 characters.',
     '- No colors, styles, icons, imports or URLs.',
     `- Write labels in ${input.lang === 'ja' ? 'Japanese' : 'English'}.`,
@@ -113,6 +118,7 @@ export async function draw(io: DrawIO, input: DrawInput): Promise<DrawResult> {
       feedback = 'it must contain exactly one ```d2 code block and the KIND and TITLE lines, with KIND one of the suggested kind ids'
       continue
     }
+    parsed.d2 = downward(parsed.d2)
     if (!isSafeD2(parsed.d2)) {
       last = 'unsafe-d2'
       feedback = 'it used an import (@...), an icon or a URL, which are not allowed'
