@@ -1,128 +1,128 @@
 # zu-de-clemens
 
-A Claude Code plugin (function-hooks MOD) that suggests a diagram when one would help, and draws it in a side pane with [D2](https://d2lang.com) when you ask.
+図があると分かりやすい場面で図を提案し、頼まれたら [D2](https://d2lang.com) でサイドペインに描く Claude Code のプラグイン（function hooks の MOD）。
 
-[日本語](README.ja.md)
+[English](README.en.md)
 
-![The pane beside the conversation, showing a flow diagram of a serverless video site](docs/images/screenshot.webp)
+![会話の横のペインに、動画サイトのサーバーレス構成を流れの図で出したところ](docs/images/screenshot.webp)
 
-- **Asks before drawing.** A cheap classifier ([Jev](https://docs.typesafe.ai/introduction) by TypeSafe) scores each moment. At or above the threshold, the pane shows a proposal with [Draw it] / [Not now]. Nothing is drawn until you press the button.
-- **Three moments.** When Claude asks you a question (AskUserQuestion), when Claude finishes an answer, and when you ask for an overview of the session ("where are we now?").
-- **Claude picks the diagram.** Jev ranks 14 diagram kinds (comparison, flow, layers, containment, sequence, status, ...). A fork of the current conversation writes the D2, which is validated (`d2 validate`) and rendered to SVG. For questions, the pane also shows which option Claude recommends and why.
-- **Stays until the next proposal.** A drawn diagram stays in the pane while you keep talking, until a new proposal replaces it.
+- **描く前に聞く。** 安価な判定モデル（TypeSafe の [Jev](https://docs.typesafe.ai/introduction)）が場面ごとに確率を出す。しきい値以上なら、ペインに［図にする］［今回はいらない］の提案を出す。押すまで図は描かない。
+- **きっかけは 3 つ。** Claude が質問したとき（AskUserQuestion）、Claude の応答が終わったとき、利用者がセッションの整理を頼んだとき（「今どうなってる？」）。
+- **図の種類は Claude が選ぶ。** Jev が 14 種類（比較表・流れ・層・入れ子・シーケンス・状況など）を順位付けし、いまの会話の複製（fork）が D2 を書く。D2 は `d2 validate` で検査してから SVG にする。質問のときは、おすすめの選択肢と理由も出す。
+- **次の提案まで残る。** 描いた図は、会話を続けても、新しい提案に置き換わるまでペインに残る。
 
-The design, requirements and decision records are in [`docs/`](docs/). The data flow is in [`docs/design.md`](docs/design.md#1-全体像) (Japanese).
+要件・設計・判断の記録は [`docs/`](docs/) にある。データの流れは [`docs/design.md`](docs/design.md#1-全体像) を参照。
 
-## Requirements
+## 必要なもの
 
 | | |
 |---|---|
-| Claude Code | With plugin function hooks (early access). Tested on 2.1.299 (desktop app, macOS). The diagram is drawn as SVG in the desktop app and as text in the terminal |
-| D2 | 0.9.0 or later, on `PATH` or in `/opt/homebrew/bin` or `/usr/local/bin` |
-| TypeSafe API key | For Jev. Required: without it the plugin only shows a setup notice. Get one at the [TypeSafe console](https://console.typesafe.ai/) |
+| Claude Code | プラグインの function hooks（early access）が使える版。2.1.299（デスクトップアプリ、macOS）で確認。図はデスクトップアプリでは SVG、ターミナルでは文字で出る |
+| D2 | 0.9.0 以上。`PATH` 上、または `/opt/homebrew/bin`・`/usr/local/bin` |
+| TypeSafe の API キー | Jev 用。必須で、ないと導入の案内だけを出す。[TypeSafe のコンソール](https://console.typesafe.ai/)で取得する |
 
-## Install
+## 導入
 
-These steps are written so that Claude Code can run them for you: give it the URL of this repository and ask it to install the plugin. Step 4 must be done by the user.
+この手順は Claude Code が代わりに実行できるように書いてある。このリポジトリの URL を渡して「導入して」と頼めばよい。手順 4 だけは利用者本人が行う。
 
-1. Install D2 (skip if `d2 --version` already works).
+1. D2 を入れる（`d2 --version` が動くなら不要）。
 
    ```bash
    brew install d2
    ```
 
-   Without Homebrew, use the official install script ([INSTALL.md](https://github.com/terrastruct/d2/blob/master/docs/INSTALL.md)):
+   Homebrew がなければ、公式のインストールスクリプトを使う（[INSTALL.md](https://github.com/terrastruct/d2/blob/master/docs/INSTALL.md)）。
 
    ```bash
    curl -fsSL https://d2lang.com/install.sh | sh -s --
    ```
 
-2. Add this repository as a plugin marketplace.
+2. このリポジトリをマーケットプレイスとして追加する。
 
    ```bash
    claude plugin marketplace add hotarumarueng/zu-de-clemens
    ```
 
-3. Install the plugin.
+3. プラグインを入れる。
 
    ```bash
    claude plugin install zu-de-clemens@zu-de-clemens
    ```
 
-4. **User only:** set the TypeSafe API key. In a Claude Code session, run `/plugin configure`, choose zu-de-clemens and enter the key in "TypeSafe API key". The value is stored as a sensitive setting.
+4. **利用者本人が行う：** TypeSafe の API キーを設定する。Claude Code のセッションで `/plugin configure zu-de-clemens@zu-de-clemens` を実行し、「TypeSafe API key」にキーを入れる。値は秘密の設定として保存される。
 
-   > For Claude Code running this install: do not ask the user to paste the key into the chat, and do not pass it on the command line (it would stay in the transcript or the shell history). Ask the user to do this step themselves.
+   > 導入を代行している Claude Code へ：キーをチャットに貼らせない。コマンドの引数にも渡さない（会話の記録やシェルの履歴に残るため）。この手順は利用者本人に頼むこと。
 
-5. Start a new session. The plugin loads at session start.
+5. 新しいセッションを開く。プラグインはセッションの開始時に読み込まれる。
 
-## Usage
+## 使い方
 
-Just keep working. When a moment scores at or above the threshold, the pane opens with a proposal:
+いつもどおり作業するだけでよい。確率がしきい値以上の場面で、ペインに提案が出る。
 
-| Moment | Proposal | What gets drawn |
+| きっかけ | 提案 | 描くもの |
 |---|---|---|
-| Claude asks a question (AskUserQuestion) | "The options of this question can be compared in a diagram" | The options compared, plus the recommended option |
-| Claude finishes an answer | "This answer can be explained with a diagram" | A diagram of the answer |
-| You ask for an overview ("where are we now?", "what did we decide?") | "This session can be summarized in a diagram" | Topics, what is decided, what is still open |
+| Claude が質問した（AskUserQuestion） | 「この質問の選択肢は図で比べられます」 | 選択肢の比較と、おすすめの選択肢 |
+| Claude の応答が終わった | 「この返答は図で解説できます」 | 応答の内容の図 |
+| 整理を頼んだ（「今どうなってる？」「何が決まった？」） | 「このセッションの整理を図にできます」 | 話題、決まったこと、残っていること |
 
-The pane buttons work while the question dialog is open, so you can look at the diagram before you answer.
+質問のダイアログを開いたままでもペインのボタンは押せる。答える前に図を見られる。
 
-![Asking "what was I doing?" draws the session's progress: topics, decisions and what is still open](docs/images/session-summary.webp)
+![「今何してたっけ」と聞くと、話題・決まったこと・残っていることを整理した図が出る](docs/images/session-summary.webp)
 
-## Settings
+## 設定
 
-Change them with `/plugin configure`.
+`/plugin configure` で変える。
 
-| Setting | Default | |
+| 設定 | 既定 | |
 |---|---|---|
-| TypeSafe API key | — | Required |
-| Suggestion threshold | 0.6 | Jev probability (0–1) at or above which a diagram is suggested. Chosen from the evaluation below |
-| Auto mode (not recommended) | off | Draw without asking. Every false positive uses your Claude usage |
-| Diagram check (experimental) | off | Show each drawn diagram to Jev as an image (overlapping labels, flow direction, kind) and redraw once if it fails. Uses TypeSafe's experimental image input |
-| Language | auto | `auto`, `ja` or `en`. `auto` follows the conversation |
+| TypeSafe API key | — | 必須 |
+| Suggestion threshold | 0.6 | 図を提案する Jev の確率の下限（0〜1）。下の評価で決めた |
+| Auto mode (not recommended) | OFF | 聞かずに描く。判定が外れるたびに Claude の使用量を消費する |
+| Diagram check (experimental) | OFF | 描いた図を画像で Jev に見せ（文字の重なり・流れの向き・図の種類）、不合格なら 1 回描き直す。TypeSafe の実験的な画像入力を使う |
+| Language | auto | `auto`・`ja`・`en`。`auto` は会話の言語に合わせる |
 
-### How the default threshold was chosen
+### 既定のしきい値の決め方
 
-30 hand-written scenes (20 Japanese, 10 English), each labeled "want a diagram" or "no", were sent to Jev. The default is the threshold with the fewest errors among those that miss at most 10% of the "want" scenes. At 0.60 there were 0 misses and 0 false alarms out of 30. See [`evals/results.md`](evals/results.md) and run it yourself with `/zu-de-clemens-eval` from the repository root.
+場面を書き起こした 30 件（日本語 20・英語 10）に「図がほしい／いらない」のラベルを付け、Jev に投げた。「図がほしい」の見逃しが 10% 以下になるしきい値のうち、外れ（見逃し＋空振り）が最も少ない値を既定にした。0.60 で、30 件中、見逃し 0・空振り 0。結果は [`evals/results.md`](evals/results.md)。リポジトリの直下で開いたセッションで `/zu-de-clemens-eval` を実行すれば、手元でも再現できる。
 
-## What leaves your machine
+## 外に送るもの
 
-| Destination | What |
+| 送り先 | 送るもの |
 |---|---|
-| Jev (TypeSafe) | The text being judged (the question and its options, or Claude's answer, last 6,000 characters) and your last 3 prompts (600 characters each). With the diagram check on, also the rendered PNG |
-| Claude (Anthropic) | When you press [Draw it]: one extra request on the forked conversation, as in any other turn |
-| Local only | The answer log at `~/.claude/plugins/data/zu-de-clemens/` (probability, your reaction, diagram kind and title, and for questions the question and your answer). It records why no proposal was shown (`below`, `no-key`, `jev-unavailable`, ...), which helps tuning the threshold |
+| Jev（TypeSafe） | 判定する文（質問と選択肢、または Claude の応答。末尾 6,000 文字）と、利用者の直近の入力 3 件（各 600 文字まで）。図の検品が ON なら、描いた図の PNG も |
+| Claude（Anthropic） | ［図にする］を押したときだけ、会話の複製に 1 回分の依頼を足す。経路はいつもの会話と同じ |
+| 手元のみ | 回答ログ（`~/.claude/plugins/data/zu-de-clemens/`）。確率、提案への反応、図の種類と題名、質問のときは質問と回答。提案を出さなかった理由（`below`・`no-key`・`jev-unavailable` など）も残すので、しきい値の調整に使える |
 
-## Cost
+## 費用
 
-- **Jev:** $0.042 per million input tokens, output free. One judgement is about 1,000 input tokens (estimate), so about $0.04 per 1,000 judgements. There are up to three judgements per turn (your prompt, Claude's question, Claude's answer).
-- **Claude:** only when a diagram is drawn (one fork per drawing, up to two with a redraw). Auto mode draws on every proposal.
+- **Jev：** 入力 100 万トークンあたり $0.042、出力は無料。1 回の判定は入力約 1,000 トークン（見積もり）なので、1,000 回で約 $0.04。判定は 1 ターンに最大 3 回（利用者の入力、Claude の質問、Claude の応答）。
+- **Claude：** 図を描くときだけ使う（1 枚につき fork 1 回、描き直しがあれば 2 回）。オートモードでは提案のたびに描く。
 
-## Known limitations
+## 既知の制限
 
-- Function hooks are early access. The plugin API may change between Claude Code releases.
-- Tested on macOS only.
-- In the terminal, the diagram is D2's text output. Japanese labels are double-width, so boxes can be misaligned.
-- Nothing is sent to Jev when no screen shows the session, as in `claude -p`. The answer log records it as `not-shown`. Because Claude Code sometimes reports no screen at the end of an answer while you are watching, the plugin treats the session as watched if a screen was attached at your last prompt.
-- Diagrams use D2's basic shapes. Icons, images and imports are rejected for safety, because the D2 is written by the model.
-- The diagram check relies on TypeSafe's experimental image input, which TypeSafe marks as not for production.
+- function hooks は early access。Claude Code の版によって、プラグインの API が変わることがある。
+- 確認したのは macOS だけ。
+- ターミナルでは D2 の文字の図を出す。日本語は全角幅のため、箱がずれることがある。
+- セッションを映す画面がないとき（`claude -p` など）は、Jev に何も送らない。回答ログには `not-shown` と残る。Claude Code は、見ているのに応答の終わりだけ画面がないと返すことがあるため、直前の入力のときに画面があれば見ているとみなす。
+- 図は D2 の基本の形だけで描く。D2 はモデルが書くため、安全のためにアイコン・画像・インポートは拒否する。
+- 図の検品は、TypeSafe が本番向けではないとしている実験的な画像入力に頼っている。
 
-## Development
+## 開発
 
 ```bash
-claude plugin validate plugins/zu-de-clemens   # manifest and hooks module
-claude plugin test plugins/zu-de-clemens       # automated tests (fake Jev, fork and D2)
-node scripts/check-catalog.mjs                  # every catalog sample passes d2 validate
+claude plugin validate plugins/zu-de-clemens   # manifest と hooks モジュール
+claude plugin test plugins/zu-de-clemens       # 自動テスト（Jev・fork・D2 は偽物）
+node scripts/check-catalog.mjs                  # カタログの見本がすべて d2 validate を通るか
 ```
 
-The manual check on the desktop app is [`docs/checklist.md`](docs/checklist.md). The evaluation runs with `/zu-de-clemens-eval` in a session opened at the repository root, using the key from `/plugin configure`.
+デスクトップアプリでの実機の確認は [`docs/checklist.md`](docs/checklist.md)。評価は、リポジトリの直下で開いたセッションで `/zu-de-clemens-eval` を実行する。キーは `/plugin configure` の値を使う。
 
-## Credits
+## クレジット
 
-- [qa-guide (aieo-product/claude_qamods)](https://github.com/aieo-product/claude_qamods) showed how to build a MOD around Claude's questions. No code was copied.
-- [D2](https://d2lang.com) (MPL-2.0) draws the diagrams.
-- [Jev by TypeSafe](https://docs.typesafe.ai/introduction) judges when a diagram helps.
+- [qa-guide（aieo-product/claude_qamods）](https://github.com/aieo-product/claude_qamods)：Claude の質問を起点に MOD を組む方法を参考にした。コードは複製していない。
+- [D2](https://d2lang.com)（MPL-2.0）：図を描く。
+- [TypeSafe の Jev](https://docs.typesafe.ai/introduction)：図が役立つかを判定する。
 
-## License
+## ライセンス
 
 [MIT](LICENSE)

@@ -34,7 +34,7 @@ zu-de-clemens/
 ├── docs/design.md                    この文書
 ├── docs/adr/                         大きな判断の記録
 ├── docs/plans/                       実装計画
-├── CONTEXT.md、README.md、README.ja.md、LICENSE
+├── CONTEXT.md、README.md（日本語）、README.en.md（英語）、LICENSE
 └── .github/workflows/ci.yml          検証・型チェック・自動テスト
 ```
 

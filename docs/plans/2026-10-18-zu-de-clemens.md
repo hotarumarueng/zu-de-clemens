@@ -280,7 +280,7 @@
 ### タスク 10: README と実機の確認（R10）
 
 **ファイル:**
-- 作成: `README.md`（英語）、`README.ja.md`、`docs/checklist.md`
+- 作成: `README.md`（日本語。公開時に日本語をメインへ入れ替えた）、`README.en.md`（英語）、`docs/checklist.md`
 
 **決めてあること:**
 - README の読み手はエンジニア。Claude がリポジトリの URL を読んで導入を代行できるよう、手順は番号付きで、コマンドはそのまま実行できる形にする
