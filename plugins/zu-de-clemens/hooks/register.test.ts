@@ -55,7 +55,7 @@ function world(on: On, over: Partial<World> = {}) {
   on('process.run', async (_$, e) => {
     const out = e.argv[1] === '--version' ? 'v0.9.0' : e.argv[1] === 'validate' ? 'ok'
       : e.argv.includes('ascii') ? '[a]->[b]' : '<svg viewBox="0 0 320 120"></svg>'
-    return { value: { exitCode: 0, stdout: out, stderr: '' } }
+    return { value: { exitCode: 0, stdout: out, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
   on('fs.read', async (_$, e) => {
     if (e.path.endsWith('.png')) return { value: { base64: 'iVBORw0KGgoAAAANSUhEUgAAAZAAAAEsCAIAAABi1XKV' } as never }

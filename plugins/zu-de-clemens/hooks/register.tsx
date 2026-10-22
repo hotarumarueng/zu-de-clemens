@@ -83,14 +83,14 @@ async function show($: EngineInterface, lang: View['lang']) {
 async function guide($: EngineInterface, seq: number, lang: View['lang'], message: StringKey) {
   if (await read($, guided)) return
   await update($, guided, () => true)
-  await update($, view, () => ({ seq, state: 'guide', lang, message }))
+  await update($, view, (): View => ({ seq, state: 'guide', lang, message }))
   await show($, lang)
 }
 
 async function startDraw($: EngineInterface, options: Options, seq: number) {
   const current = await read($, view)
   if (current.seq !== seq || !current.trigger) return
-  await update($, view, v => ({ ...v, state: 'drawing', drawId: seq }))
+  await update($, view, (v): View => ({ ...v, state: 'drawing', drawId: seq }))
   const result = await draw(drawIO($), {
     trigger: current.trigger,
     text: current.text ?? '',
@@ -103,7 +103,7 @@ async function startDraw($: EngineInterface, options: Options, seq: number) {
   if (now.state !== 'drawing' || now.drawId !== seq) return
   if (result.ok) {
     const { d2: _source, ...figure } = result.figure
-    await update($, view, v => ({ ...v, state: 'figure', figure }))
+    await update($, view, (v): View => ({ ...v, state: 'figure', figure }))
     await log($, await read($, view), options.auto ? 'auto' : 'accepted')
     return
   }
@@ -112,15 +112,15 @@ async function startDraw($: EngineInterface, options: Options, seq: number) {
     await guide($, seq, current.lang, 'guideNoD2')
     return
   }
-  const message: Record<typeof result.reason, StringKey> = {
+  const reason = result.reason
+  const message: Record<typeof reason, StringKey> = {
     'nothing-to-fork': 'failureNothingToFork',
     'fork-failed': 'failureFork',
     'invalid-reply': 'failureInvalid',
     'unsafe-d2': 'failureUnsafe',
     'd2-failed': 'failureD2',
-    'd2-missing': 'guideNoD2',
   }
-  await update($, view, v => ({ ...v, state: 'failure', message: message[result.reason] }))
+  await update($, view, (v): View => ({ ...v, state: 'failure', message: message[reason] }))
 }
 
 async function consider($: EngineInterface, options: Options, trigger: TriggerKind, text: string, extra: Partial<View> = {}) {
@@ -136,7 +136,7 @@ async function consider($: EngineInterface, options: Options, trigger: TriggerKi
   // 提案を出したまま次のきっかけが来たら、放置として記録する
   if (before.state === 'proposal') await log($, before, 'ignored')
   // 図と描画中の表示は、次の提案が出るまで残す（読んでいる途中で消さない）
-  await update($, view, v => (v.state === 'figure' || v.state === 'drawing' ? { ...v, seq } : { seq, state: 'idle', lang }))
+  await update($, view, (v): View => (v.state === 'figure' || v.state === 'drawing' ? { ...v, seq } : { seq, state: 'idle', lang }))
 
   const onScreen = (await $.session.surfaces()).length > 0
   if (trigger === 'prompt') await update($, watched, () => onScreen)
@@ -156,7 +156,7 @@ async function consider($: EngineInterface, options: Options, trigger: TriggerKi
   if (probability === undefined || probability < options.threshold) return log($, { ...idle, probability, candidates }, 'below')
   if ((await read($, view)).seq !== seq) return
 
-  await update($, view, () => ({ seq, state: 'proposal', trigger, lang, text, probability, candidates, ...extra }))
+  await update($, view, (): View => ({ seq, state: 'proposal', trigger, lang, text, probability, candidates, ...extra }))
   if (options.auto) {
     await show($, lang)
     return startDraw($, options, seq)
@@ -217,7 +217,7 @@ export const register: Register = (on, rawOptions) => {
       const answers = (ran as { result?: { answers?: Record<string, string> } }).result?.answers
       if (answers) {
         const answer = Object.values(answers).join(' / ')
-        await update($, view, v => (v.seq === seq ? { ...v, answer } : v))
+        await update($, view, (v): View => (v.seq === seq ? { ...v, answer } : v))
       }
     } catch {
       // 回答の記録に失敗しても、結果はそのまま返す
@@ -255,7 +255,7 @@ export const register: Register = (on, rawOptions) => {
       dismiss: async () => {
         if ((await read($, view)).seq !== current.seq) return
         await log($, current, 'dismissed')
-        await update($, view, v => ({ ...v, state: 'idle' }))
+        await update($, view, (v): View => ({ ...v, state: 'idle' }))
       },
     })
   })

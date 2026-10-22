@@ -4,7 +4,7 @@
 
 [English](README.md)
 
-<!-- TODO: ペインのスクリーンショット（提案 → 図） -->
+![会話の横のペインに、動画サイトのサーバーレス構成を流れの図で出したところ](docs/images/screenshot.webp)
 
 - **描く前に聞く。** 安価な判定モデル（TypeSafe の [Jev](https://docs.typesafe.ai/introduction)）が場面ごとに確率を出す。しきい値以上なら、ペインに［図にする］［今回はいらない］の提案を出す。押すまで図は描かない。
 - **きっかけは 3 つ。** Claude が質問したとき（AskUserQuestion）、Claude の応答が終わったとき、利用者がセッションの整理を頼んだとき（「今どうなってる？」）。

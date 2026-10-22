@@ -1,4 +1,4 @@
-import type { EngineInterface, RenderInputOf } from 'claude-code'
+import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { View } from '../types'
 import { kindById } from './catalog'
@@ -22,7 +22,7 @@ export function svgWidth(svg: string): number | undefined {
   return Number.isFinite(width) && width > 0 ? Math.round(width) : undefined
 }
 
-export function renderPane($: EngineInterface, e: RenderInputOf<'Pane'>, view: View, actions: PaneActions) {
+export function renderPane($: EngineInterface, e: RenderInput<'Pane'>, view: View, actions: PaneActions) {
   const { Box, Text, Button } = $.ui.resolve(e)
   const lang = view.lang
   const kindName = (id: string) => kindById(id)?.name[lang] ?? id

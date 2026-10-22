@@ -4,7 +4,7 @@ A Claude Code plugin (function-hooks MOD) that suggests a diagram when one would
 
 [日本語](README.ja.md)
 
-<!-- TODO: screenshot of the pane (proposal → diagram) -->
+![The pane beside the conversation, showing a flow diagram of a serverless video site](docs/images/screenshot.webp)
 
 - **Asks before drawing.** A cheap classifier ([Jev](https://docs.typesafe.ai/introduction) by TypeSafe) scores each moment. At or above the threshold, the pane shows a proposal with [Draw it] / [Not now]. Nothing is drawn until you press the button.
 - **Three moments.** When Claude asks you a question (AskUserQuestion), when Claude finishes an answer, and when you ask for an overview of the session ("where are we now?").
