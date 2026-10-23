@@ -110,6 +110,8 @@ test('fork への指示に、候補の種類の見本と返す形が入る', asy
   expect(prompts[0]!.includes('input -> process -> store -> output')).toBe(true)
   expect(prompts[0]!.includes('KIND:')).toBe(true)
   expect(prompts[0]!.includes('RECOMMEND:')).toBe(true)
+  expect(prompts[0]!.includes('grid-columns: 1')).toBe(true)
+  expect(prompts[0]!.includes('Draw only what the target states')).toBe(true)
 })
 
 test('検品なしのときは PNG を作らない', async () => {

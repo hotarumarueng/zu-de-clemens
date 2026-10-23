@@ -69,6 +69,8 @@ function buildPrompt(input: DrawInput, feedback?: string): string {
     '',
     'Rules:',
     '- Write D2. Lay it out top to bottom (direction: down); the pane is tall and narrow.',
+    '- Boxes without arrows between them ignore direction and sit side by side. Wherever that happens, including inside containers, add grid-columns: 1 so they stack top to bottom.',
+    '- Draw only what the target states. If it does not say where or to whom something goes, do not guess the end of that arrow and do not skip anything in between; keep the wording of the target instead.',
     '- At most 12 boxes. Labels at most 20 characters.',
     '- No colors, styles, icons, imports or URLs.',
     `- Write labels in ${input.lang === 'ja' ? 'Japanese' : 'English'}.`,

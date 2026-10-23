@@ -183,12 +183,16 @@ post.user_id -> user.id`,
     id: 'status',
     name: { ja: '進み具合', en: 'Status' },
     when: { ja: 'セッションの整理（話題ごとに、決まったこと・残っていること）', en: 'Session summary: per topic, what is decided and what is open' },
+    // 矢印のない箱は direction に従わず横に並ぶ。grid-columns: 1 で枠の中も外も 1 列にする（issue #1）
     sample: `direction: down
+grid-columns: 1
 topic_a: Topic A {
+  grid-columns: 1
   decided: "Decided: X"
   open: "Open: Y"
 }
 topic_b: Topic B {
+  grid-columns: 1
   decided: "Decided: Z"
 }`,
   },
