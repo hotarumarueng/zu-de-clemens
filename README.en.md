@@ -4,7 +4,7 @@
 
 ### Gimme a diagram for that 🎨
 
-A Claude Code plugin (function-hooks MOD) that **asks "want a diagram?"** when one would help, and draws it in a side pane with [D2](https://d2lang.com) when you say yes.
+A Claude Code plugin (function-hooks MOD) that **suggests a diagram** when one would help, and draws it in a side pane with [D2](https://d2lang.com) when you ask.
 
 [![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-6A3FC1)](#-install) [![D2 0.9+](https://img.shields.io/badge/D2-0.9%2B-5FE3FF)](https://d2lang.com) [![macOS](https://img.shields.io/badge/macOS-tested-7A4A6E)](#-known-limitations) [![MIT](https://img.shields.io/badge/license-MIT-555A6B)](LICENSE)
 
@@ -12,13 +12,13 @@ A Claude Code plugin (function-hooks MOD) that **asks "want a diagram?"** when o
 
 </div>
 
-https://github.com/user-attachments/assets/b63b32a7-dcce-4962-99c1-34522d9979c9
+https://github.com/user-attachments/assets/c7a1639e-9c8f-4509-b4fa-8d132eebe753
 
 ![The pane beside the conversation, showing a flow diagram of a serverless video site](docs/images/screenshot.webp)
 
 ## ✨ What it does
 
-- 🙋 **Asks before drawing.** A cheap classifier ([Jev](https://docs.typesafe.ai/introduction) by TypeSafe) scores each moment. At or above the threshold, the pane shows a proposal with [Draw it] / [Not now]. Nothing is drawn until you press the button.
+- 🙋 **Proposes before drawing.** A cheap classifier ([Jev](https://docs.typesafe.ai/introduction) by TypeSafe) scores each moment. At or above the threshold, the pane shows a proposal with [Draw it] / [Not now]. Nothing is drawn until you press the button.
 - 🔔 **Three moments.** When Claude asks you a question (AskUserQuestion), when Claude finishes an answer, and when you ask for an overview of the session ("where are we now?").
 - 🧩 **Claude picks the diagram.** Jev ranks 14 diagram kinds (comparison, flow, layers, containment, sequence, status, ...). A fork of the current conversation writes the D2, which is validated (`d2 validate`) and rendered to SVG. For questions, the pane also shows which option Claude recommends and why.
 - 📌 **Stays until the next proposal.** A drawn diagram stays in the pane while you keep talking, until a new proposal replaces it.

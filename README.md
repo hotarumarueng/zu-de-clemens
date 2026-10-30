@@ -4,7 +4,7 @@
 
 ### その説明、図でクレメンス 🎨
 
-図があると分かりやすい場面で **「図にする？」と聞いて**、頼まれたら [D2](https://d2lang.com) でサイドペインに描く Claude Code のプラグイン（function hooks の MOD）だよ。
+図があると分かりやすい場面で **図を提案して**、頼まれたら [D2](https://d2lang.com) でサイドペインに描く Claude Code のプラグイン（function hooks の MOD）だよ。
 
 [![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-6A3FC1)](#-導入) [![D2 0.9+](https://img.shields.io/badge/D2-0.9%2B-5FE3FF)](https://d2lang.com) [![macOS](https://img.shields.io/badge/macOS-tested-7A4A6E)](#-既知の制限) [![MIT](https://img.shields.io/badge/license-MIT-555A6B)](LICENSE)
 
@@ -12,13 +12,13 @@
 
 </div>
 
-https://github.com/user-attachments/assets/b63b32a7-dcce-4962-99c1-34522d9979c9
+https://github.com/user-attachments/assets/c7a1639e-9c8f-4509-b4fa-8d132eebe753
 
 ![会話の横のペインに、動画サイトのサーバーレス構成を流れの図で出したところ](docs/images/screenshot.webp)
 
 ## ✨ できること
 
-- 🙋 **描く前に聞く。** 安価な判定モデル（TypeSafe の [Jev](https://docs.typesafe.ai/introduction)）が場面ごとに確率を出すよ。しきい値以上なら、ペインに［図にする］［今回はいらない］の提案が出る。押すまで図は描かない。
+- 🙋 **描く前に提案する。** 安価な判定モデル（TypeSafe の [Jev](https://docs.typesafe.ai/introduction)）が場面ごとに確率を出すよ。しきい値以上なら、ペインに［図にする］［今回はいらない］の提案が出る。押すまで図は描かない。
 - 🔔 **きっかけは 3 つ。** Claude が質問したとき（AskUserQuestion）、Claude の応答が終わったとき、セッションの整理を頼んだとき（「今どうなってる？」）。
 - 🧩 **図の種類は Claude が選ぶ。** Jev が 14 種類（比較表・流れ・層・入れ子・シーケンス・状況など）を順位付けして、いまの会話の複製（fork）が D2 を書く。D2 は `d2 validate` で検査してから SVG にする。質問のときは、おすすめの選択肢と理由も出すよ。
 - 📌 **次の提案まで残る。** 描いた図は、会話を続けても、新しい提案に置き換わるまでペインに残る。
