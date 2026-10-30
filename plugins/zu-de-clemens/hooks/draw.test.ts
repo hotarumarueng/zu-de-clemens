@@ -112,6 +112,10 @@ test('fork への指示に、候補の種類の見本と返す形が入る', asy
   expect(prompts[0]!.includes('RECOMMEND:')).toBe(true)
   expect(prompts[0]!.includes('grid-columns: 1')).toBe(true)
   expect(prompts[0]!.includes('Draw only what the target states')).toBe(true)
+  expect(prompts[0]!.includes('Do not invent an order')).toBe(true)
+  expect(prompts[0]!.includes('belongs in its container label')).toBe(true)
+  expect(prompts[0]!.includes('Something proposed to replace X is not an input to X')).toBe(true)
+  expect(prompts[0]!.includes('{style.stroke-dash: 3}')).toBe(true)
 })
 
 test('検品なしのときは PNG を作らない', async () => {
