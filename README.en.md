@@ -6,6 +6,8 @@ A Claude Code plugin (function-hooks MOD) that suggests a diagram when one would
 
 [日本語](README.md)
 
+https://github.com/user-attachments/assets/b63b32a7-dcce-4962-99c1-34522d9979c9
+
 ![The pane beside the conversation, showing a flow diagram of a serverless video site](docs/images/screenshot.webp)
 
 - **Asks before drawing.** A cheap classifier ([Jev](https://docs.typesafe.ai/introduction) by TypeSafe) scores each moment. At or above the threshold, the pane shows a proposal with [Draw it] / [Not now]. Nothing is drawn until you press the button.

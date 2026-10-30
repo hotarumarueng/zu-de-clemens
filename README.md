@@ -6,6 +6,8 @@
 
 [English](README.en.md)
 
+https://github.com/user-attachments/assets/b63b32a7-dcce-4962-99c1-34522d9979c9
+
 ![会話の横のペインに、動画サイトのサーバーレス構成を流れの図で出したところ](docs/images/screenshot.webp)
 
 - **描く前に聞く。** 安価な判定モデル（TypeSafe の [Jev](https://docs.typesafe.ai/introduction)）が場面ごとに確率を出す。しきい値以上なら、ペインに［図にする］［今回はいらない］の提案を出す。押すまで図は描かない。
