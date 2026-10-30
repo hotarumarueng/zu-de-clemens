@@ -105,6 +105,8 @@ Change them with `/plugin configure`.
 - In the terminal, the diagram is D2's text output. Japanese labels are double-width, so boxes can be misaligned.
 - Nothing is sent to Jev when no screen shows the session, as in `claude -p`. The answer log records it as `not-shown`. Because Claude Code sometimes reports no screen at the end of an answer while you are watching, the plugin treats the session as watched if a screen was attached at your last prompt.
 - It does not learn. Pressing [Not now] only writes `dismissed` to the answer log; neither the threshold nor Jev's scoring changes. To improve the proposals, turn the reactions in the answer log into cases in `evals/cases.jsonl`, run `/zu-de-clemens-eval` and put the suggested threshold into the settings.
+- The diagram content is written by Claude in a fork of the current conversation, so its accuracy depends on the model the conversation uses. Jev only decides whether to propose and which diagram kinds to suggest.
+- A diagram reflects the answer it was drawn from. If a later answer changes the conclusion, the earlier diagram is not redrawn.
 - Diagrams use D2's basic shapes. Icons, images and imports are rejected for safety, because the D2 is written by the model.
 - The diagram check relies on TypeSafe's experimental image input, which TypeSafe marks as not for production.
 
