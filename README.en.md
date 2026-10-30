@@ -1,23 +1,32 @@
-# zu-de-clemens
+<div align="center">
 
-![zu-de-clemens (図でクレメンス, "gimme a diagram") logo](docs/images/banner.webp)
+<img src="docs/images/banner.webp" alt="zu-de-clemens (図でクレメンス, &quot;gimme a diagram&quot;) logo" width="720">
 
-A Claude Code plugin (function-hooks MOD) that suggests a diagram when one would help, and draws it in a side pane with [D2](https://d2lang.com) when you ask.
+### Gimme a diagram for that 🎨
 
-[日本語](README.md)
+A Claude Code plugin (function-hooks MOD) that **asks "want a diagram?"** when one would help, and draws it in a side pane with [D2](https://d2lang.com) when you say yes.
+
+[![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-6A3FC1)](#-install) [![D2 0.9+](https://img.shields.io/badge/D2-0.9%2B-5FE3FF)](https://d2lang.com) [![macOS](https://img.shields.io/badge/macOS-tested-7A4A6E)](#-known-limitations) [![MIT](https://img.shields.io/badge/license-MIT-555A6B)](LICENSE)
+
+[日本語](README.md) ・ **English**
+
+</div>
 
 https://github.com/user-attachments/assets/b63b32a7-dcce-4962-99c1-34522d9979c9
 
 ![The pane beside the conversation, showing a flow diagram of a serverless video site](docs/images/screenshot.webp)
 
-- **Asks before drawing.** A cheap classifier ([Jev](https://docs.typesafe.ai/introduction) by TypeSafe) scores each moment. At or above the threshold, the pane shows a proposal with [Draw it] / [Not now]. Nothing is drawn until you press the button.
-- **Three moments.** When Claude asks you a question (AskUserQuestion), when Claude finishes an answer, and when you ask for an overview of the session ("where are we now?").
-- **Claude picks the diagram.** Jev ranks 14 diagram kinds (comparison, flow, layers, containment, sequence, status, ...). A fork of the current conversation writes the D2, which is validated (`d2 validate`) and rendered to SVG. For questions, the pane also shows which option Claude recommends and why.
-- **Stays until the next proposal.** A drawn diagram stays in the pane while you keep talking, until a new proposal replaces it.
+## ✨ What it does
+
+- 🙋 **Asks before drawing.** A cheap classifier ([Jev](https://docs.typesafe.ai/introduction) by TypeSafe) scores each moment. At or above the threshold, the pane shows a proposal with [Draw it] / [Not now]. Nothing is drawn until you press the button.
+- 🔔 **Three moments.** When Claude asks you a question (AskUserQuestion), when Claude finishes an answer, and when you ask for an overview of the session ("where are we now?").
+- 🧩 **Claude picks the diagram.** Jev ranks 14 diagram kinds (comparison, flow, layers, containment, sequence, status, ...). A fork of the current conversation writes the D2, which is validated (`d2 validate`) and rendered to SVG. For questions, the pane also shows which option Claude recommends and why.
+- 📌 **Stays until the next proposal.** A drawn diagram stays in the pane while you keep talking, until a new proposal replaces it.
+- 🌗 **Light or dark.** Diagram colors follow the app's appearance, picked for at least 4.5:1 contrast on text and 3:1 on lines.
 
 The design, requirements and decision records are in [`docs/`](docs/). The data flow is in [`docs/design.md`](docs/design.md#1-全体像) (Japanese).
 
-## Requirements
+## 🧰 Requirements
 
 | | |
 |---|---|
@@ -25,9 +34,9 @@ The design, requirements and decision records are in [`docs/`](docs/). The data 
 | D2 | 0.9.0 or later, on `PATH` or in `/opt/homebrew/bin` or `/usr/local/bin` |
 | TypeSafe API key | For Jev. Required: without it the plugin only shows a setup notice. Get one at the [TypeSafe console](https://console.typesafe.ai/) |
 
-## Install
+## 🚀 Install
 
-These steps are written so that Claude Code can run them for you: give it the URL of this repository and ask it to install the plugin. Step 4 must be done by the user.
+These steps are written so that Claude Code can run them for you: give it the URL of this repository and ask it to install the plugin. Only step 4 is yours.
 
 1. Install D2 (skip if `d2 --version` already works).
 
@@ -53,15 +62,15 @@ These steps are written so that Claude Code can run them for you: give it the UR
    claude plugin install zu-de-clemens@zu-de-clemens
    ```
 
-4. **User only:** set the TypeSafe API key. In a Claude Code session, run `/plugin configure zu-de-clemens@zu-de-clemens` and enter the key in "TypeSafe API key". The value is stored as a sensitive setting.
+4. 🔑 **User only:** set the TypeSafe API key. In a Claude Code session, run `/plugin configure zu-de-clemens@zu-de-clemens` and enter the key in "TypeSafe API key". The value is stored as a sensitive setting.
 
-   > For Claude Code running this install: do not ask the user to paste the key into the chat, and do not pass it on the command line (it would stay in the transcript or the shell history). Ask the user to do this step themselves.
+   > 🔒 **For Claude Code running this install:** do not ask the user to paste the key into the chat, and do not pass it on the command line (it would stay in the transcript or the shell history). Ask the user to do this step themselves.
 
 5. Start a new session. The plugin loads at session start.
 
-## Usage
+## 💬 Usage
 
-Just keep working. When a moment scores at or above the threshold, the pane opens with a proposal:
+Just keep working! When a moment scores at or above the threshold, the pane opens with a proposal:
 
 | Moment | Proposal | What gets drawn |
 |---|---|---|
@@ -69,11 +78,12 @@ Just keep working. When a moment scores at or above the threshold, the pane open
 | Claude finishes an answer | "This answer can be explained with a diagram" | A diagram of the answer |
 | You ask for an overview ("where are we now?", "what did we decide?") | "This session can be summarized in a diagram" | Topics, what is decided, what is still open |
 
-The pane buttons work while the question dialog is open, so you can look at the diagram before you answer.
+> [!TIP]
+> The pane buttons work while the question dialog is open, so you can look at the diagram before you answer.
 
 ![Asking "what was I doing?" draws the session's progress: topics, decisions and what is still open](docs/images/session-summary.webp)
 
-## Settings
+## ⚙️ Settings
 
 Change them with `/plugin configure`.
 
@@ -85,11 +95,14 @@ Change them with `/plugin configure`.
 | Diagram check (experimental) | off | Show each drawn diagram to Jev as an image (overlapping labels, flow direction, kind) and redraw once if it fails. Uses TypeSafe's experimental image input |
 | Language | auto | `auto`, `ja` or `en`. `auto` follows the conversation |
 
-### How the default threshold was chosen
+<details>
+<summary>📏 How the default threshold was chosen</summary>
 
 30 hand-written scenes (20 Japanese, 10 English), each labeled "want a diagram" or "no", were sent to Jev. The default is the threshold with the fewest errors among those that miss at most 10% of the "want" scenes. At 0.60 there were 0 misses and 0 false alarms out of 30. See [`evals/results.md`](evals/results.md) and run it yourself with `/zu-de-clemens-eval` from the repository root.
 
-## What leaves your machine
+</details>
+
+## 📤 What leaves your machine
 
 | Destination | What |
 |---|---|
@@ -97,12 +110,12 @@ Change them with `/plugin configure`.
 | Claude (Anthropic) | When you press [Draw it]: one extra request on the forked conversation, as in any other turn |
 | Local only | The answer log at `~/.claude/plugins/data/zu-de-clemens/` (probability, your reaction, diagram kind and title, and for questions the question and your answer). It records why no proposal was shown (`below`, `no-key`, `jev-unavailable`, ...), which helps tuning the threshold |
 
-## Cost
+## 💰 Cost
 
 - **Jev:** $0.042 per million input tokens, output free. One judgement is about 1,000 input tokens (estimate), so about $0.04 per 1,000 judgements. There are up to three judgements per turn (your prompt, Claude's question, Claude's answer).
 - **Claude:** only when a diagram is drawn (one fork per drawing, up to two with a redraw). Auto mode draws on every proposal.
 
-## Known limitations
+## 🚧 Known limitations
 
 - Function hooks are early access. The plugin API may change between Claude Code releases.
 - Tested on macOS only.
@@ -114,7 +127,7 @@ Change them with `/plugin configure`.
 - Diagrams use D2's basic shapes. Icons, images and imports are rejected for safety, because the D2 is written by the model.
 - The diagram check relies on TypeSafe's experimental image input, which TypeSafe marks as not for production.
 
-## Development
+## 🛠️ Development
 
 ```bash
 claude plugin validate plugins/zu-de-clemens   # manifest and hooks module
@@ -124,12 +137,18 @@ node scripts/check-catalog.mjs                  # every catalog sample passes d2
 
 The manual check on the desktop app is [`docs/checklist.md`](docs/checklist.md). The evaluation runs with `/zu-de-clemens-eval` in a session opened at the repository root, using the key from `/plugin configure`.
 
-## Credits
+## 💐 Credits
 
 - [qa-guide (aieo-product/claude_qamods)](https://github.com/aieo-product/claude_qamods) showed how to build a MOD around Claude's questions. No code was copied.
 - [D2](https://d2lang.com) (MPL-2.0) draws the diagrams.
 - [Jev by TypeSafe](https://docs.typesafe.ai/introduction) judges when a diagram helps.
 
-## License
+## 📄 License
 
 [MIT](LICENSE)
+
+<div align="center">
+
+**図でクレメンス 🎨 by [@hotarumarueng](https://github.com/hotarumarueng)**
+
+</div>
