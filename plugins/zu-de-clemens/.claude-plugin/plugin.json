@@ -1,6 +1,6 @@
 {
   "name": "zu-de-clemens",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Suggests a diagram when one would help, and draws it in a side pane with D2 when you ask.",
   "author": {
     "name": "Toriumi"
