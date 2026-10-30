@@ -1,5 +1,7 @@
 # zu-de-clemens
 
+![zu-de-clemens (図でクレメンス, "gimme a diagram") logo](docs/images/banner.webp)
+
 A Claude Code plugin (function-hooks MOD) that suggests a diagram when one would help, and draws it in a side pane with [D2](https://d2lang.com) when you ask.
 
 [日本語](README.md)

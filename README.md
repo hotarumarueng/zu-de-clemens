@@ -1,5 +1,7 @@
 # zu-de-clemens
 
+![zu-de-clemens（図でクレメンス）のロゴ](docs/images/banner.webp)
+
 図があると分かりやすい場面で図を提案し、頼まれたら [D2](https://d2lang.com) でサイドペインに描く Claude Code のプラグイン（function hooks の MOD）。
 
 [English](README.en.md)
