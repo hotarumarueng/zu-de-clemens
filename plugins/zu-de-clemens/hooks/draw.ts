@@ -52,6 +52,36 @@ export function downward(d2: string): string {
   return `direction: down\n${d2.replace(/^direction:.*$\n?/gm, '')}`
 }
 
+// バナーに寄せた配色。ライトは藤色の地に紫の線、ダークは Dark Mauve の地に水色の線。判断のひし形（N4）だけ別の色にする。
+// AA2 は表の型の文字（既定の青は白地で 4.3:1 しかない）、AA4 は円柱の地。
+// どの色も、文字は 4.5:1・線は 3:1 以上を満たすよう測って決めた
+const THEME = `vars: {
+  d2-config: {
+    theme-overrides: {
+      N2: "#555A6B"
+      N4: "#BDEFFF"
+      B1: "#6A3FC1"
+      B2: "#6A3FC1"
+      B4: "#ECE3FB"
+      B5: "#F4EEFD"
+      B6: "#FAF7FF"
+      AA2: "#6A3FC1"
+      AA4: "#ECE3FB"
+    }
+    dark-theme-overrides: {
+      N4: "#7A4A6E"
+      B1: "#5FE3FF"
+      B2: "#5FE3FF"
+      B4: "#4C4F66"
+    }
+  }
+}
+`
+
+export function themed(d2: string): string {
+  return THEME + d2
+}
+
 function buildPrompt(input: DrawInput, feedback?: string): string {
   const kinds = input.candidates.slice(0, 3).map(c => kindById(c.id)).filter(k => k !== undefined)
   return [
@@ -123,7 +153,7 @@ export async function draw(io: DrawIO, input: DrawInput): Promise<DrawResult> {
       feedback = 'it must contain exactly one ```d2 code block and the KIND and TITLE lines, with KIND one of the suggested kind ids'
       continue
     }
-    parsed.d2 = downward(parsed.d2)
+    parsed.d2 = themed(downward(parsed.d2))
     if (!isSafeD2(parsed.d2)) {
       last = 'unsafe-d2'
       feedback = 'it used an import (@...), an icon or a URL, which are not allowed'

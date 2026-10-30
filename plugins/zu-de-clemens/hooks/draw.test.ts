@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { downward, draw, isSafeD2, parseReply } from './draw'
+import { downward, draw, isSafeD2, parseReply, themed } from './draw'
 import type { DrawIO } from './draw'
 
 const GOOD = '```d2\na -> b\n```\nKIND: flow\nTITLE: 流れ\nRECOMMEND: 2. B案：速い'
@@ -97,11 +97,11 @@ test('d2 が見つからなければ d2-missing', async () => {
 test('成功時は SVG と文字の図を決めたオプションで作る', async () => {
   const { io, runs } = fakeIO([{ text: GOOD }])
   const r = await draw(io, input)
-  expect(r).toEqual({ ok: true, figure: { kind: 'flow', title: '流れ', recommend: '2. B案：速い', svg: '<svg/>', ascii: '[a]->[b]', d2: 'direction: down\na -> b' } })
+  expect(r).toEqual({ ok: true, figure: { kind: 'flow', title: '流れ', recommend: '2. B案：速い', svg: '<svg/>', ascii: '[a]->[b]', d2: themed('direction: down\na -> b') } })
   const [svg, ascii] = renders(runs)
   for (const flag of ['--theme', '0', '--dark-theme', '200', '--scale', '1', '--pad', '20']) expect(svg!.argv.includes(flag)).toBe(true)
   expect(ascii!.argv.includes('--stdout-format') && ascii!.argv.includes('ascii')).toBe(true)
-  expect(svg!.stdin).toBe('direction: down\na -> b')
+  expect(svg!.stdin).toBe(themed('direction: down\na -> b'))
 })
 
 test('fork への指示に、候補の種類の見本と返す形が入る', async () => {
@@ -153,4 +153,12 @@ test('downward は向きの指定を下向き 1 つに揃える（入れ子の�
   expect(downward('direction: right\na -> b')).toBe('direction: down\na -> b')
   expect(downward('a -> b')).toBe('direction: down\na -> b')
   expect(downward('g: {\n  direction: right\n  x -> y\n}')).toBe('direction: down\ng: {\n  direction: right\n  x -> y\n}')
+})
+
+test('描く図にはライトとダークの配色が付き、安全の検査も通る', async () => {
+  expect(isSafeD2(themed('a -> b'))).toBe(true)
+  const { io, runs } = fakeIO([{ text: GOOD }])
+  const result = await draw(io, input)
+  expect(result.ok && result.figure.d2.includes('theme-overrides') && result.figure.d2.includes('dark-theme-overrides')).toBe(true)
+  expect(renders(runs).every(r => r.stdin?.includes('B1: "#6A3FC1"') && r.stdin.includes('B1: "#5FE3FF"'))).toBe(true)
 })
