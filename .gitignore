@@ -1,3 +1,6 @@
 .DS_Store
 .superpowers/
 plugins/zu-de-clemens/.claude-plugin/types/
+
+# Claude Code の承認済みコマンド（秘密情報が入りうる）
+.claude/settings.local.json
