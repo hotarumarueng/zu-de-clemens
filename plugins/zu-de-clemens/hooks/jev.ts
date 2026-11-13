@@ -1,6 +1,6 @@
 import type { HttpInit, HttpResponse } from 'claude-code'
 
-import { KINDS } from './catalog'
+import { KINDS, SUMMARY_ONLY } from './catalog'
 import type { DiagramKind } from './catalog'
 
 export type TriggerKind = 'question' | 'answer' | 'prompt'
@@ -32,11 +32,14 @@ const NEEDS_DIAGRAM = {
   },
 }
 
+// 応答・質問では、整理専用の種類を候補に出さない（設計 5 章の表）
+const PICKABLE = KINDS.filter(kind => !SUMMARY_ONLY.includes(kind.id))
+
 const DIAGRAM_KIND = {
   type: 'choice',
   instructions: 'Which kind of diagram fits `target.text` best?',
   criteria: {
-    ...Object.fromEntries(KINDS.map(kind => [kind.id, kind.when.en])),
+    ...Object.fromEntries(PICKABLE.map(kind => [kind.id, kind.when.en])),
     none: 'No diagram kind fits.',
   },
 }
@@ -84,7 +87,7 @@ function parse(trigger: TriggerKind, text: string): Judgement {
   const entries = Object.entries(probabilities)
   if (!entries.every(([, value]) => isProbability(value))) return { ok: false, reason: 'malformed' }
   const kinds = entries
-    .filter(([id]) => KINDS.some(kind => kind.id === id))
+    .filter(([id]) => PICKABLE.some(kind => kind.id === id))
     .map(([id, value]) => ({ id: id as DiagramKind, p: value as number }))
     .sort((a, b) => b.p - a.p)
   return { ok: true, needsDiagram: p, kinds }
