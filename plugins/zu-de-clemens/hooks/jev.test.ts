@@ -40,8 +40,10 @@ test('質問のときは needs_diagram と diagram_kind を jev-latest に聞く
   expect(Object.keys(sent[0]!.body.questions).sort()).toEqual(['diagram_kind', 'needs_diagram'])
   expect(sent[0]!.body.questions.needs_diagram.type).toBe('noul')
   expect(sent[0]!.body.questions.diagram_kind.type).toBe('choice')
-  expect(Object.keys(sent[0]!.body.questions.diagram_kind.criteria).length).toBe(15)
+  // 14 種から整理専用の status を除いた 13 種と none
+  expect(Object.keys(sent[0]!.body.questions.diagram_kind.criteria).length).toBe(14)
   expect('none' in sent[0]!.body.questions.diagram_kind.criteria).toBe(true)
+  expect('status' in sent[0]!.body.questions.diagram_kind.criteria).toBe(false)
   expect(sent[0]!.body.state.target).toEqual({ kind: 'question', text: 'A案とB案のどちら？' })
 })
 
@@ -59,6 +61,19 @@ test('確率と、none を除いた図の種類を高い順に返す', async () 
     diagram_kind: { type: 'choice', probabilities: { flow: 0.6, none: 0.1, layers: 0.3 }, confidence: 0.5 },
   }))
   expect(await judge(io, input())).toEqual({ ok: true, needsDiagram: 0.76, kinds: [{ id: 'flow', p: 0.6 }, { id: 'layers', p: 0.3 }] })
+})
+
+// status は整理（prompt）専用（設計 5 章の表）。応答に当てると、関係のない箱の羅列になる（#8）
+test('応答と質問のときは、Jev が status を返しても候補に入れない', async () => {
+  for (const trigger of ['answer', 'question'] as const) {
+    const { io } = fakeIO(ok({
+      needs_diagram: { type: 'noul', noul: 0.85 },
+      diagram_kind: { type: 'choice', probabilities: { status: 0.5, flow: 0.3, decision: 0.2 } },
+    }))
+    expect(await judge(io, input({ trigger }))).toEqual({
+      ok: true, needsDiagram: 0.85, kinds: [{ id: 'flow', p: 0.3 }, { id: 'decision', p: 0.2 }],
+    })
+  }
 })
 
 test('401 は unauthorized', async () => {

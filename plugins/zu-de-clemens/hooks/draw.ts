@@ -1,6 +1,6 @@
 import type { ModelForkResult, ProcessRunInit, ProcessRunResult } from 'claude-code'
 
-import { kindById } from './catalog'
+import { kindById, SUMMARY_ONLY } from './catalog'
 import type { CheckResult } from './check'
 import type { DiagramKind } from './catalog'
 import type { TriggerKind } from './jev'
@@ -104,8 +104,13 @@ function buildPrompt(input: DrawInput, feedback?: string): string {
     '- Do not invent an order. If the target says several judgments or steps happen together, at once or in no fixed order, do not chain them; put them in one container and label it as unordered.',
     '- A property of a whole group (e.g. no threshold, no log) belongs in its container label, not in a box beside the members.',
     '- Keep each relation as the target states it. Something proposed to replace X is not an input to X: do not draw it as an arrow into X; label the edge with the target\'s own word (e.g. replaces), make it dashed with {style.stroke-dash: 3} and keep proposals apart from the current state.',
-    '- At most 12 boxes. Labels at most 20 characters.',
-    '- No colors, styles, icons, imports or URLs. The only exception is the dashed edge above.',
+    '- The reader must get the point from the diagram alone. Put the conclusion of the target in TITLE as one sentence, not a topic name.',
+    '- Write each label so it keeps its subject: what was checked or what it is, then the result (e.g. "29 settings files checked → 0 secrets"). Do not cut a label down to a fragment that only makes sense next to the target.',
+    '- When items have a state, start the label with a mark: ✓ done or fine, ! needs action, ? not checked. Use the same mark for the same state everywhere.',
+    '- Unless this is a session overview, do not stack unconnected boxes. If the items have no relations to draw as arrows, use a comparison or matrix layout instead.',
+    // 1 行 20 字では幅 455px になり、ペインで縮む。2 行・16 字なら 261px（2026-11-13 に d2 0.9 で実測）
+    `- At most 12 boxes. Labels: at most 2 lines (split with \\n), each line at most ${input.lang === 'ja' ? 16 : 30} characters.`,
+    '- No colors, styles, icons, imports or URLs. The only exceptions are the dashed edge above and the state marks.',
     `- Write labels in ${input.lang === 'ja' ? 'Japanese' : 'English'}.`,
     '',
     'Reply with exactly this and nothing else:',
@@ -113,7 +118,7 @@ function buildPrompt(input: DrawInput, feedback?: string): string {
     '<your D2>',
     '```',
     'KIND: <the kind id you used>',
-    'TITLE: <one-line title>',
+    'TITLE: <the conclusion of the target, one sentence>',
     ...(input.trigger === 'question' ? ['RECOMMEND: <the option you recommend and why, one line>'] : []),
     ...(feedback ? ['', `Your previous reply was rejected: ${feedback}`, 'Fix it and reply again in the same format.'] : []),
   ].join('\n')
@@ -151,6 +156,11 @@ export async function draw(io: DrawIO, input: DrawInput): Promise<DrawResult> {
     if (!parsed || !kindById(parsed.kind)) {
       last = 'invalid-reply'
       feedback = 'it must contain exactly one ```d2 code block and the KIND and TITLE lines, with KIND one of the suggested kind ids'
+      continue
+    }
+    if (input.trigger !== 'prompt' && SUMMARY_ONLY.includes(parsed.kind as DiagramKind)) {
+      last = 'invalid-reply'
+      feedback = `${parsed.kind} is only for session overviews; pick another kind that shows how the parts relate`
       continue
     }
     parsed.d2 = themed(downward(parsed.d2))
