@@ -198,6 +198,9 @@ topic_b: Topic B {
   },
 ]
 
+/** 整理（R3・prompt）のきっかけ専用の種類。応答・質問に当てると、関係のない箱の羅列になる（#8） */
+export const SUMMARY_ONLY: readonly DiagramKind[] = ['status']
+
 export function kindById(id: string): KindInfo | undefined {
   return KINDS.find(kind => kind.id === id)
 }

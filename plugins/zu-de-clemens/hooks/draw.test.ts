@@ -64,6 +64,22 @@ test('1 回目が形の違反なら理由を添えて書き直させ、2 回目�
   expect(prompts[1]!.includes('```d2')).toBe(true)
 })
 
+test('応答のときに fork が整理専用の status を選んだら、理由を添えて書き直させる（#8）', async () => {
+  const status = '```d2\na\n```\nKIND: status\nTITLE: 状況'
+  const { io, prompts } = fakeIO([{ text: status }, { text: GOOD }])
+  const r = await draw(io, { ...input, trigger: 'answer' })
+  expect(r.ok && r.figure.kind).toBe('flow')
+  expect(prompts.length).toBe(2)
+  expect(prompts[1]!.includes('status is only for session overviews')).toBe(true)
+})
+
+test('整理のときは status を選べる', async () => {
+  const { io, prompts } = fakeIO([{ text: '```d2\na\n```\nKIND: status\nTITLE: 状況' }])
+  const r = await draw(io, { ...input, trigger: 'prompt', candidates: [{ id: 'status', p: 1 }] })
+  expect(r.ok && r.figure.kind).toBe('status')
+  expect(prompts.length).toBe(1)
+})
+
 test('d2 validate が 2 回とも失敗したら d2-failed、fork は 2 回だけ', async () => {
   const { io, prompts } = fakeIO([{ text: GOOD }, { text: GOOD }, { text: GOOD }], { validateFails: 2 })
   expect(await draw(io, input)).toEqual({ ok: false, reason: 'd2-failed' })
@@ -116,6 +132,26 @@ test('fork への指示に、候補の種類の見本と返す形が入る', asy
   expect(prompts[0]!.includes('belongs in its container label')).toBe(true)
   expect(prompts[0]!.includes('Something proposed to replace X is not an input to X')).toBe(true)
   expect(prompts[0]!.includes('{style.stroke-dash: 3}')).toBe(true)
+})
+
+// 結論がない・主語がない・状態の区別がない・関係のない箱の羅列、を防ぐルール（#8）
+test('fork への指示に、結論・主語・状態の記号・関係のない項目の扱いが入る', async () => {
+  const { io, prompts } = fakeIO([{ text: GOOD }])
+  await draw(io, { ...input, trigger: 'answer' })
+  expect(prompts[0]!.includes('TITLE: <the conclusion of the target, one sentence>')).toBe(true)
+  expect(prompts[0]!.includes('keeps its subject')).toBe(true)
+  expect(prompts[0]!.includes('✓ done or fine, ! needs action, ? not checked')).toBe(true)
+  expect(prompts[0]!.includes('do not stack unconnected boxes')).toBe(true)
+})
+
+test('ラベルは 2 行まで。1 行の文字数は日本語 16・英語 30', async () => {
+  const ja = fakeIO([{ text: GOOD }])
+  await draw(ja.io, input)
+  expect(ja.prompts[0]!.includes('at most 2 lines (split with \\n), each line at most 16 characters')).toBe(true)
+  expect(ja.prompts[0]!.includes('at most 20 characters')).toBe(false)
+  const en = fakeIO([{ text: GOOD }])
+  await draw(en.io, { ...input, lang: 'en' })
+  expect(en.prompts[0]!.includes('each line at most 30 characters')).toBe(true)
 })
 
 test('検品なしのときは PNG を作らない', async () => {
