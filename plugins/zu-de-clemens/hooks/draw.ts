@@ -52,6 +52,13 @@ export function downward(d2: string): string {
   return `direction: down\n${d2.replace(/^direction:.*$\n?/gm, '')}`
 }
 
+// 格子（grid-columns/rows）の中の矢印は ELK を通らず直線で引かれ、箱を貫いて文字が重なる（#4）。
+// 矢印のある図からは格子を外す。矢印のない整理の図（#1）は格子のまま縦に積む
+// shortcut: 引用符の中の "->" も矢印とみなす。誤検知しても格子が外れて横に広がるだけ
+export function gridOnlyWithoutEdges(d2: string): string {
+  return /<-|->|--/.test(d2) ? d2.replace(/^[ \t]*grid-(columns|rows):.*$\n?/gm, '') : d2
+}
+
 // バナーに寄せた配色。ライトは藤色の地に紫の線、ダークは Dark Mauve の地に水色の線。判断のひし形（N4）だけ別の色にする。
 // AA2 は表の型の文字（既定の青は白地で 4.3:1 しかない）、AA4 は円柱の地。
 // どの色も、文字は 4.5:1・線は 3:1 以上を満たすよう測って決めた
@@ -99,7 +106,8 @@ function buildPrompt(input: DrawInput, feedback?: string): string {
     '',
     'Rules:',
     '- Write D2. Lay it out top to bottom (direction: down); the pane is tall and narrow.',
-    '- Boxes without arrows between them ignore direction and sit side by side. Wherever that happens, including inside containers, add grid-columns: 1 so they stack top to bottom.',
+    '- Boxes without arrows between them ignore direction and sit side by side. If the diagram has no arrows at all, add grid-columns: 1 at the top and inside every container so they stack top to bottom.',
+    '- Never use grid-columns in a diagram with arrows: arrows inside a grid are drawn straight through other boxes and their labels overlap.',
     '- Draw only what the target states. If it does not say where or to whom something goes, do not guess the end of that arrow and do not skip anything in between; keep the wording of the target instead.',
     '- Do not invent an order. If the target says several judgments or steps happen together, at once or in no fixed order, do not chain them; put them in one container and label it as unordered.',
     '- A property of a whole group (e.g. no threshold, no log) belongs in its container label, not in a box beside the members.',
@@ -163,7 +171,7 @@ export async function draw(io: DrawIO, input: DrawInput): Promise<DrawResult> {
       feedback = `${parsed.kind} is only for session overviews; pick another kind that shows how the parts relate`
       continue
     }
-    parsed.d2 = themed(downward(parsed.d2))
+    parsed.d2 = themed(downward(gridOnlyWithoutEdges(parsed.d2)))
     if (!isSafeD2(parsed.d2)) {
       last = 'unsafe-d2'
       feedback = 'it used an import (@...), an icon or a URL, which are not allowed'
