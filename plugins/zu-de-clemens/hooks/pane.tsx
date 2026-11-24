@@ -8,6 +8,10 @@ import type { StringKey } from './strings'
 export type PaneActions = {
   draw: () => Promise<void>
   dismiss: () => Promise<void>
+  manual: () => Promise<void>
+  open: () => Promise<void>
+  /** 入力欄の指示で描き直す */
+  redraw: (instruction: string) => Promise<void>
 }
 
 const PROPOSAL_KEY: Record<NonNullable<View['trigger']>, StringKey> = {
@@ -23,22 +27,32 @@ export function svgWidth(svg: string): number | undefined {
 }
 
 export function renderPane($: EngineInterface, e: RenderInput<'Pane'>, view: View, actions: PaneActions) {
-  const { Box, Text, Button } = $.ui.resolve(e)
+  const { Box, Text, Button, Input } = $.ui.resolve(e)
   const lang = view.lang
   const kindName = (id: string) => kindById(id)?.name[lang] ?? id
+  // しきい値未満だった直近のきっかけを、利用者が頼めば図にできるようにする（#5）
+  const manual = view.latest && (
+    <Box key="manualRow" flexDirection="column" gap={1}>
+      <Text dimColor>{t(lang, 'manualHint')}</Text>
+      <Box flexDirection="row">
+        <Button key="manual" variant="secondary" label={t(lang, 'manual')} onPress={() => actions.manual()} />
+      </Box>
+    </Box>
+  )
 
   if (view.state === 'proposal') {
+    // Button に大きさ・色の指定はない。主ボタンの印・枠・絵文字つきの長いラベル・ボタン間の余白で、押せる範囲と見分けやすさを稼ぐ（#7）
     return (
-      <Box flexDirection="column" gap={1}>
+      <Box flexDirection="column" gap={1} borderStyle="round" borderColor="claude" paddingX={1}>
         <Text bold>{t(lang, PROPOSAL_KEY[view.trigger ?? 'answer'])}</Text>
         <Text dimColor>
           {t(lang, 'candidates', { kinds: (view.candidates ?? []).map(c => kindName(c.id)).join(' / ') || '-' })}
           {'  '}
           {t(lang, 'probability', { p: (view.probability ?? 0).toFixed(2) })}
         </Text>
-        <Box flexDirection="row" gap={1}>
-          <Button key="draw" label={t(lang, 'draw')} onPress={() => actions.draw()} />
-          <Button key="dismiss" plain label={t(lang, 'dismiss')} onPress={() => actions.dismiss()} />
+        <Box flexDirection="row" flexWrap="wrap" gap={2}>
+          <Button key="draw" variant="primary" label={t(lang, 'draw')} onPress={() => actions.draw()} />
+          <Button key="dismiss" variant="secondary" label={t(lang, 'dismiss')} onPress={() => actions.dismiss()} />
         </Box>
       </Box>
     )
@@ -66,13 +80,24 @@ export function renderPane($: EngineInterface, e: RenderInput<'Pane'>, view: Vie
           {'  '}
           {t(lang, 'probability', { p: (view.probability ?? 0).toFixed(2) })}
         </Text>
+        <Box flexDirection="row" flexWrap="wrap" gap={2}>
+          <Button key="open" variant="secondary" label={t(lang, 'open')} onPress={() => actions.open()} />
+        </Box>
+        <Input
+          key="redraw"
+          placeholder={t(lang, 'redrawPlaceholder')}
+          submitLabel={t(lang, 'redraw')}
+          onSubmit={text => { actions.redraw(text) }}
+        />
+        {manual}
       </Box>
     )
   }
 
   if ((view.state === 'guide' || view.state === 'failure') && view.message) {
-    return <Text color={view.state === 'failure' ? 'red' : undefined}>{t(lang, view.message as StringKey)}</Text>
+    const message = <Text color={view.state === 'failure' ? 'red' : undefined}>{t(lang, view.message as StringKey)}</Text>
+    return manual ? <Box flexDirection="column" gap={1}>{message}{manual}</Box> : message
   }
 
-  return <Text dimColor>{t(lang, 'title')}</Text>
+  return manual || <Text dimColor>{t(lang, 'title')}</Text>
 }
