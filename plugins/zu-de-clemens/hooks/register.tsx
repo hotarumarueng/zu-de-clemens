@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PluginOptions, Register } from 'claude-code'
 
 import type { View } from '../types'
+import { kindById } from './catalog'
 import type { DiagramKind } from './catalog'
 import { checkFigure } from './check'
 import { draw } from './draw'
@@ -14,6 +15,7 @@ import type { LogEntry, LogIO } from './log'
 import { renderPane } from './pane'
 import { detectLang, t } from './strings'
 import type { StringKey } from './strings'
+import { viewerHtml } from './viewer'
 
 const PANE = 'zu-de-clemens'
 // コマンド名にコロンは使えない（CommandSpec.name）
@@ -53,14 +55,14 @@ function readOptions(options: PluginOptions): Options {
   const threshold = Number(options.threshold)
   return {
     key: typeof options.typesafe_api_key === 'string' ? options.typesafe_api_key.trim() : '',
-    threshold: Number.isFinite(threshold) && threshold >= 0 && threshold <= 1 ? threshold : 0.6,
+    threshold: Number.isFinite(threshold) && threshold >= 0 && threshold <= 1 ? threshold : 0.8,
     auto: options.auto_mode === true,
     imageCheck: options.image_check === true,
     language: typeof options.language === 'string' ? options.language : 'auto',
   }
 }
 
-async function log($: EngineInterface, current: View, reaction: LogEntry['reaction']) {
+async function log($: EngineInterface, current: View, reaction: LogEntry['reaction'], instruction?: string) {
   if (!current.trigger) return
   const place = { home: (await $.env.get('HOME')) ?? '', cwd: await $.session.cwd() }
   await appendLog(logIO($), place, {
@@ -72,8 +74,11 @@ async function log($: EngineInterface, current: View, reaction: LogEntry['reacti
     ...(current.figure ? { figure: { kind: current.figure.kind as never, title: current.figure.title } } : {}),
     ...(current.question ? { question: current.question } : {}),
     ...(current.answer ? { answer: current.answer } : {}),
+    ...(instruction ? { instruction } : {}),
   })
 }
+
+const dataDir = async ($: EngineInterface) => `${(await $.env.get('HOME')) ?? ''}/.claude/plugins/data/zu-de-clemens`
 
 async function show($: EngineInterface, lang: View['lang']) {
   const opened = await $.ui.open({ id: PANE, title: t(lang, 'title') })
@@ -87,11 +92,28 @@ async function guide($: EngineInterface, seq: number, lang: View['lang'], messag
   await show($, lang)
 }
 
-async function startDraw($: EngineInterface, options: Options, seq: number) {
+/** 手動（#5）・描き直し（#6）のときの描き方。描き直しは利用者の指示と前の D2 を fork への依頼の末尾に足す */
+type DrawHow = { reaction?: 'manual' | 'redraw'; instruction?: string; previous?: string }
+
+function redrawNote(instruction: string, previous: string | undefined): string {
+  return [
+    '',
+    'The user looked at the diagram drawn for this target and asked for a redraw.',
+    ...(previous ? ['Previous diagram:', '```d2', previous, '```'] : []),
+    `The user's instruction (follow it, and keep the rules above): ${JSON.stringify(instruction)}`,
+  ].join('\n')
+}
+
+async function startDraw($: EngineInterface, options: Options, seq: number, how: DrawHow = {}) {
   const current = await read($, view)
   if (current.seq !== seq || !current.trigger) return
   await update($, view, (v): View => ({ ...v, state: 'drawing', drawId: seq }))
-  const result = await draw(drawIO($), {
+  const io = drawIO($)
+  if (how.instruction) {
+    const note = redrawNote(how.instruction, how.previous)
+    io.fork = prompt => $.model.fork({ prompt: `${prompt}\n${note}` })
+  }
+  const result = await draw(io, {
     trigger: current.trigger,
     text: current.text ?? '',
     candidates: (current.candidates ?? []) as never,
@@ -102,9 +124,9 @@ async function startDraw($: EngineInterface, options: Options, seq: number) {
   const now = await read($, view)
   if (now.state !== 'drawing' || now.drawId !== seq) return
   if (result.ok) {
-    const { d2: _source, ...figure } = result.figure
-    await update($, view, (v): View => ({ ...v, state: 'figure', figure }))
-    await log($, await read($, view), options.auto ? 'auto' : 'accepted')
+    // D2 は描き直しのときに fork へ前の図として渡すため残す
+    await update($, view, (v): View => ({ ...v, state: 'figure', figure: result.figure }))
+    await log($, await read($, view), how.reaction ?? (options.auto ? 'auto' : 'accepted'), how.instruction)
     return
   }
   if (result.reason === 'd2-missing') {
@@ -136,7 +158,7 @@ async function consider($: EngineInterface, options: Options, trigger: TriggerKi
   // 提案を出したまま次のきっかけが来たら、放置として記録する
   if (before.state === 'proposal') await log($, before, 'ignored')
   // 図と描画中の表示は、次の提案が出るまで残す（読んでいる途中で消さない）
-  await update($, view, (v): View => (v.state === 'figure' || v.state === 'drawing' ? { ...v, seq } : { seq, state: 'idle', lang }))
+  await update($, view, (v): View => (v.state === 'figure' || v.state === 'drawing' ? { ...v, seq, latest: undefined } : { seq, state: 'idle', lang }))
 
   const onScreen = (await $.session.surfaces()).length > 0
   if (trigger === 'prompt') await update($, watched, () => onScreen)
@@ -153,7 +175,11 @@ async function consider($: EngineInterface, options: Options, trigger: TriggerKi
   }
   const probability = trigger === 'prompt' ? judgement.sessionSummary : judgement.needsDiagram
   const candidates = trigger === 'prompt' ? [{ id: 'status', p: 1 }] : judgement.kinds ?? []
-  if (probability === undefined || probability < options.threshold) return log($, { ...idle, probability, candidates }, 'below')
+  if (probability === undefined || probability < options.threshold) {
+    const latest = { trigger, lang, text, probability, candidates, ...extra }
+    if (probability !== undefined) await update($, view, (v): View => (v.seq === seq ? { ...v, latest } : v))
+    return log($, { ...idle, probability, candidates }, 'below')
+  }
   if ((await read($, view)).seq !== seq) return
 
   await update($, view, (): View => ({ seq, state: 'proposal', trigger, lang, text, probability, candidates, ...extra }))
@@ -162,6 +188,43 @@ async function consider($: EngineInterface, options: Options, trigger: TriggerKi
     return startDraw($, options, seq)
   }
   await show($, lang)
+}
+
+// しきい値未満だった直近のきっかけを、利用者が頼んだときに描く（#5）
+async function drawManually($: EngineInterface, options: Options) {
+  const v = await read($, view)
+  if (!v.latest || v.state === 'proposal' || v.state === 'drawing') return
+  await update($, view, (): View => ({ seq: v.seq, state: 'idle', ...v.latest!, lang: v.latest!.lang, ...(v.answer ? { answer: v.answer } : {}) }))
+  await startDraw($, options, v.seq, { reaction: 'manual' })
+}
+
+async function redraw($: EngineInterface, options: Options, instruction: string) {
+  const text = instruction.trim().slice(0, 1000)
+  const v = await read($, view)
+  if (!text || v.state !== 'figure' || !v.figure) return
+  await startDraw($, options, v.seq, { reaction: 'redraw', instruction: text, ...(v.figure.d2 ? { previous: v.figure.d2 } : {}) })
+}
+
+// ペインの幅では読めない図を、図を埋め込んだ HTML にして既定のブラウザで開く（#3。拡大・移動は viewer.ts）。
+// Svg 部品はホイール・ピンチを受けず、Client は Svg を描けないため、ペインの中では実現できない
+async function openFigure($: EngineInterface) {
+  const v = await read($, view)
+  if (!v.figure) return
+  try {
+    // $.session.info() の platform は 2.1.322 の CLI にないため、uname で OS を見分ける
+    const os = (await $.process.run(['uname'], { timeoutMs: 10_000 })).stdout.trim()
+    const opener = os === 'Darwin' ? 'open' : os === 'Linux' ? 'xdg-open' : undefined
+    if (!opener) return $.ui.toast(t(v.lang, 'toastCannotOpen'))
+    const kind = kindById(v.figure.kind)?.name[v.lang] ?? v.figure.kind
+    const html = viewerHtml({ ...v.figure, kind }, v.lang)
+    if (!html) return $.ui.toast(t(v.lang, 'toastCannotOpen'))
+    const path = `${await dataDir($)}/figure.html`
+    await $.fs.write(path, html)
+    const ran = await $.process.run([opener, path], { timeoutMs: 10_000 })
+    if (ran.exitCode !== 0) $.ui.toast(t(v.lang, 'toastCannotOpen'))
+  } catch {
+    $.ui.toast(t(v.lang, 'toastCannotOpen'))
+  }
 }
 
 // 作者がしきい値を決めるための評価。キーは /plugin configure の値だけを使う（設計 8 章）。
@@ -257,6 +320,9 @@ export const register: Register = (on, rawOptions) => {
         await log($, current, 'dismissed')
         await update($, view, (v): View => ({ ...v, state: 'idle' }))
       },
+      manual: () => drawManually($, options),
+      open: () => openFigure($),
+      redraw: instruction => redraw($, options, instruction),
     })
   })
 }

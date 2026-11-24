@@ -14,10 +14,12 @@ export type LogEntry = {
   probability?: number
   candidates: DiagramKind[]
   /** 提案への反応。no-key 以降は提案を出さなかった理由（なぜ出ないのかを利用者が確かめられるように残す） */
-  reaction: 'accepted' | 'dismissed' | 'ignored' | 'auto' | 'not-shown' | 'no-key' | 'below' | 'jev-unauthorized' | 'jev-unavailable' | 'jev-malformed' | 'error'
+  reaction: 'accepted' | 'dismissed' | 'ignored' | 'auto' | 'manual' | 'redraw' | 'not-shown' | 'no-key' | 'below' | 'jev-unauthorized' | 'jev-unavailable' | 'jev-malformed' | 'error'
   figure?: { kind: DiagramKind; title: string }
   question?: string
   answer?: string
+  /** 描き直し（redraw）のときに利用者が書いた指示 */
+  instruction?: string
 }
 
 // FNV-1a 32bit。作業フォルダごとにファイルを分けるためだけに使う。
@@ -46,6 +48,7 @@ function format(entry: LogEntry): string {
     ...(entry.figure ? [`- figure: ${entry.figure.kind}「${oneLine(entry.figure.title)}」`] : []),
     ...(entry.question ? [`- question: ${oneLine(entry.question)}`] : []),
     ...(entry.answer ? [`- answer: ${oneLine(entry.answer)}`] : []),
+    ...(entry.instruction ? [`- instruction: ${oneLine(entry.instruction)}`] : []),
     '',
   ].join('\n')
 }

@@ -24,12 +24,18 @@ type World = {
   surfacesThrow: boolean
   /** fork の返事を差し替える（n は何回目の呼び出しか） */
   fork?: (n: number) => Promise<string>
+  /** 最後に fork へ送った依頼文 */
+  lastPrompt?: string
+  /** $.process.run に渡されたコマンド */
+  runs: string[][]
+  /** uname の答え */
+  os: string
 }
 
 // プラグインが使う外部の呼び出しを、すべてテスト側で受ける。
 function world(on: On, over: Partial<World> = {}) {
   const w: World = {
-    fetches: 0, imageFetches: 0, forks: 0, toasts: [], files: new Map(), surfaces: ['desktop'], placed: true,
+    fetches: 0, imageFetches: 0, forks: 0, toasts: [], runs: [], os: 'Darwin', files: new Map(), surfaces: ['desktop'], placed: true,
     noul: 0.8, jevStatus: 200, forkReply: GOOD_REPLY, opens: 0, surfacesThrow: false, ...over,
   }
   const clock = mock.clock(on)
@@ -47,12 +53,15 @@ function world(on: On, over: Partial<World> = {}) {
       : { needs_diagram: { type: 'noul', noul: w.noul }, diagram_kind: { type: 'choice', probabilities: { flow: 0.7, layers: 0.3 } } }
     return { value: { status: w.jevStatus, ok: w.jevStatus < 300, headers: {}, text: JSON.stringify({ answers }) } }
   })
-  on('model.fork', async () => {
+  on('model.fork', async (_$, e) => {
     w.forks++
+    w.lastPrompt = e.prompt
     const text = w.fork ? await w.fork(w.forks) : w.forkReply
     return { value: { isAnswered: true, text } as never }
   })
   on('process.run', async (_$, e) => {
+    w.runs.push([...e.argv])
+    if (e.argv[0] === 'uname') return { value: { exitCode: 0, stdout: `${w.os}\n`, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
     const out = e.argv[1] === '--version' ? 'v0.9.0' : e.argv[1] === 'validate' ? 'ok'
       : e.argv.includes('ascii') ? '[a]->[b]' : '<svg viewBox="0 0 320 120"></svg>'
     return { value: { exitCode: 0, stdout: out, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
@@ -368,4 +377,120 @@ test('入力のときにも画面がなければ（claude -p など）、応答�
   await settle()
   expect(w.fetches).toBe(0)
   expect(log().split('- reaction: not-shown').length - 1).toBe(2)
+})
+
+// #7 ボタンの押しやすさ。大きさの指定は API にないため、主ボタンの印・枠・ラベルの長さで押せる範囲を広げる
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`提案のボタンは［図にする］が主ボタンで、［今回はいらない］も枠つきで描く（${surface}）`, { options: OPTIONS }, async ($, on) => {
+    const { settle } = world(on)
+    await ask($)
+    await settle()
+    const ui = await mountPane($, surface)
+    const drawButton = await ui.find({ key: 'draw' })
+    const dismissButton = await ui.find({ key: 'dismiss' })
+    expect(drawButton?.props.variant).toBe('primary')
+    expect(drawButton?.props.label).toBe('🎨 図にする')
+    expect(dismissButton?.props.plain).toBe(undefined)
+    expect(dismissButton?.props.label).toBe('🙅 今回はいらない')
+  })
+}
+
+// #5 手動の［図にして］
+test('しきい値未満でも［図にして］で直近のきっかけを図にでき、回答ログに manual が残る', { options: OPTIONS }, async ($, on) => {
+  const { w, settle, log } = world(on, { noul: 0.3 })
+  await complete($)
+  await settle()
+  const ui = await mountPane($, 'desktop')
+  expect(await ui.find({ key: 'draw' })).toBe(undefined)
+  await ui.press({ key: 'manual' })
+  await settle()
+  expect(w.forks).toBe(1)
+  expect(w.lastPrompt?.includes('IAM のポリシーはアカウントの中で効きます。')).toBe(true)
+  expect(await ui.find({ text: /流れの図/ })).toBeDefined()
+  expect(log().includes('- reaction: below')).toBe(true)
+  expect(log().includes('- reaction: manual')).toBe(true)
+})
+
+test('図を出したあとにしきい値未満のきっかけが来たら、図を残したまま［図にして］を出す', { options: OPTIONS }, async ($, on) => {
+  const { w, settle } = world(on)
+  await ask($)
+  await settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await settle()
+  w.noul = 0.3
+  await complete($)
+  await settle()
+  expect(await ui.find({ text: /流れの図/ })).toBeDefined()
+  await ui.press({ key: 'manual' })
+  await settle()
+  expect(w.forks).toBe(2)
+  expect(w.lastPrompt?.includes('IAM のポリシーはアカウントの中で効きます。')).toBe(true)
+})
+
+test('提案が出ている場面と、きっかけがまだない場面では［図にして］を出さない', { options: OPTIONS }, async ($, on) => {
+  const { settle } = world(on)
+  const ui = await mountPane($, 'desktop')
+  expect(await ui.find({ key: 'manual' })).toBe(undefined)
+  await ask($)
+  await settle()
+  expect(await ui.find({ key: 'draw' })).toBeDefined()
+  expect(await ui.find({ key: 'manual' })).toBe(undefined)
+})
+
+// #3 図を大きく開く
+const drawFigure = async ($: any, on: On, over: Partial<World> = {}) => {
+  const ctx = world(on, over)
+  await ask($)
+  await ctx.settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await ctx.settle()
+  return { ...ctx, ui }
+}
+
+test('［大きく開く］で図を埋め込んだ HTML をデータ置き場に書き、macOS の open で開く', { options: OPTIONS }, async ($, on) => {
+  const { w, ui } = await drawFigure($, on)
+  await ui.press({ key: 'open' })
+  const path = '/home/u/.claude/plugins/data/zu-de-clemens/figure.html'
+  const html = w.files.get(path) ?? ''
+  expect(html.startsWith('<!doctype html>')).toBe(true)
+  expect(html.includes('<svg viewBox="0 0 320 120"></svg>')).toBe(true)
+  expect(w.runs.some(argv => argv[0] === 'open' && argv[1] === path)).toBe(true)
+})
+
+test('［大きく開く］は、開き方を知らない OS ではトーストで知らせ、何も起動しない', { options: OPTIONS }, async ($, on) => {
+  const { w, ui } = await drawFigure($, on, { os: 'MINGW64_NT' })
+  await ui.press({ key: 'open' })
+  expect(w.runs.some(argv => argv[0] === 'open' || argv[0] === 'xdg-open')).toBe(false)
+  expect(w.toasts.length).toBe(1)
+})
+
+// #6 描き直しの指示
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`図の下の入力欄に指示を書いて送ると、指示と前の D2 を添えて描き直す（${surface}）`, { options: OPTIONS }, async ($, on) => {
+    const ctx = world(on)
+    await ask($)
+    await ctx.settle()
+    const ui = await mountPane($, surface)
+    await ui.press({ key: 'draw' })
+    await ctx.settle()
+    await $.ui.input({ plugin: PLUGIN, key: 'redraw', text: 'AとBは同時に起きる', surface })
+    await ctx.settle()
+    expect(ctx.w.forks).toBe(2)
+    expect(ctx.w.lastPrompt?.includes('AとBは同時に起きる')).toBe(true)
+    expect(ctx.w.lastPrompt?.includes('a -> b')).toBe(true)
+    expect(await ui.find({ text: /流れの図/ })).toBeDefined()
+    expect(ctx.log().includes('- reaction: redraw')).toBe(true)
+    expect(ctx.log().includes('- instruction: AとBは同時に起きる')).toBe(true)
+  })
+}
+
+// 入力欄は送信ボタン（submitLabel）を自分で描く。別に［描き直す］を置くと 2 つ並ぶ（2026-11-21 実機）
+test('描き直しの入力欄は空なら何もせず、別置きの［描き直す］ボタンはない', { options: OPTIONS }, async ($, on) => {
+  const { w, ui, settle } = await drawFigure($, on)
+  await $.ui.input({ plugin: PLUGIN, key: 'redraw', text: '   ', surface: 'desktop' })
+  await settle()
+  expect(w.forks).toBe(1)
+  expect(await ui.find({ key: 'redrawButton' })).toBeUndefined()
 })

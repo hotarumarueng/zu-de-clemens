@@ -81,6 +81,11 @@ Just keep working! When a moment scores at or above the threshold, the pane open
 > [!TIP]
 > The pane buttons work while the question dialog is open, so you can look at the diagram before you answer.
 
+When no proposal was shown, [Draw this] in the open pane still draws the latest moment. Under a drawn diagram you get:
+
+- [Open larger]: writes the diagram to an SVG file and opens it in your OS's default app (usually a browser) to zoom and pan there. macOS and Linux only
+- A redraw field and [Redraw]: write what to change ("A and B happen at once") and the diagram is redrawn with your instruction and the previous diagram
+
 ![Asking "what was I doing?" draws the session's progress: topics, decisions and what is still open](docs/images/session-summary.webp)
 
 ## ⚙️ Settings
@@ -90,7 +95,7 @@ Change them with `/plugin configure`.
 | Setting | Default | |
 |---|---|---|
 | TypeSafe API key | — | Required |
-| Suggestion threshold | 0.6 | Jev probability (0–1) at or above which a diagram is suggested. Chosen from the evaluation below |
+| Suggestion threshold | 0.8 | Jev probability (0–1) at or above which a diagram is suggested. Chosen from the evaluation and usage below |
 | Auto mode (not recommended) | off | Draw without asking. Every false positive uses your Claude usage |
 | Diagram check (experimental) | off | Show each drawn diagram to Jev as an image (overlapping labels, flow direction, kind) and redraw once if it fails. Uses TypeSafe's experimental image input |
 | Language | auto | `auto`, `ja` or `en`. `auto` follows the conversation |
@@ -100,6 +105,8 @@ Change them with `/plugin configure`.
 
 30 hand-written scenes (20 Japanese, 10 English), each labeled "want a diagram" or "no", were sent to Jev. The default is the threshold with the fewest errors among those that miss at most 10% of the "want" scenes. At 0.60 there were 0 misses and 0 false alarms out of 30. See [`evals/results.md`](evals/results.md) and run it yourself with `/zu-de-clemens-eval` from the repository root.
 
+In real use, 0.6 suggested too often (182 suggestions out of 224 judgements from 2026-10-19 to 10-30, of which 51 were accepted). At 0.8, 39 of the 51 accepted suggestions remain and the 130 unaccepted ones drop to 69. When no suggestion appears, you can still draw with the pane's [🎨 Draw this] button (#5).
+
 </details>
 
 ## 📤 What leaves your machine
@@ -107,13 +114,13 @@ Change them with `/plugin configure`.
 | Destination | What |
 |---|---|
 | Jev (TypeSafe) | The text being judged (the question and its options, or Claude's answer, last 6,000 characters) and your last 3 prompts (600 characters each). With the diagram check on, also the rendered PNG |
-| Claude (Anthropic) | When you press [Draw it]: one extra request on the forked conversation, as in any other turn |
-| Local only | The answer log at `~/.claude/plugins/data/zu-de-clemens/` (probability, your reaction, diagram kind and title, and for questions the question and your answer). It records why no proposal was shown (`below`, `no-key`, `jev-unavailable`, ...), which helps tuning the threshold |
+| Claude (Anthropic) | When you press [Draw it], [Draw this] or [Redraw]: one extra request on the forked conversation, as in any other turn. A redraw request also carries your instruction and the previous diagram's D2 |
+| Local only | The answer log at `~/.claude/plugins/data/zu-de-clemens/` (probability, your reaction (`manual` for [Draw this], `redraw` for a redraw), diagram kind and title, for questions the question and your answer, and for redraws your instruction). The page opened with [Open larger] (`figure.html` in the same folder, overwritten each time; a CSP blocks any network access). It records why no proposal was shown (`below`, `no-key`, `jev-unavailable`, ...), which helps tuning the threshold |
 
 ## 💰 Cost
 
 - **Jev:** $0.042 per million input tokens, output free. One judgement is about 1,000 input tokens (estimate), so about $0.04 per 1,000 judgements. There are up to three judgements per turn (your prompt, Claude's question, Claude's answer).
-- **Claude:** only when a diagram is drawn (one fork per drawing, up to two with a redraw). Auto mode draws on every proposal.
+- **Claude:** only when a diagram is drawn (one fork per drawing, up to two when the D2 fails validation and is rewritten). Each [Redraw] costs the same again. Auto mode draws on every proposal.
 
 ## 🚧 Known limitations
 
