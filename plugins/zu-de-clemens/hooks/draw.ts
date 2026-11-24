@@ -13,7 +13,13 @@ export type DrawIO = {
   png?: (d2: string) => Promise<string | undefined>
 }
 
-export type Figure = { kind: DiagramKind; title: string; recommend?: string; svg: string; ascii: string; d2: string }
+/** 図にしない形。流れのない返答は、ペインの Markdown で一覧・表として出す */
+export type TextKind = 'list' | 'table'
+const TEXT_KINDS: readonly string[] = ['list', 'table']
+const MAX_MARKDOWN_LINES = 30
+
+/** markdown があれば一覧・表。svg と d2 は空になる */
+export type Figure = { kind: DiagramKind | TextKind; title: string; recommend?: string; svg: string; ascii: string; d2: string; markdown?: string }
 
 export type DrawResult =
   | { ok: true; figure: Figure }
@@ -26,20 +32,37 @@ const RUN_TIMEOUT_MS = 10_000
 const ATTEMPTS = 2
 
 const TRIGGER_TEXT: Record<TriggerKind, string> = {
-  question: 'Claude is asking the user the question below. Draw a diagram that compares the options so the user can choose.',
-  answer: 'Claude just gave the answer below. Draw a diagram that explains it.',
-  prompt: 'The user asked for an overview of this session. Draw the topics, what is decided and what is still open.',
+  question: 'Claude is asking the user the question below. Show the options so the user can compare them and choose.',
+  answer: 'Claude just gave the answer below. Show it so the reader grasps it at a glance.',
+  prompt: 'The user asked for an overview of this session. Show the topics, what is decided and what is still open.',
 }
 
-export function parseReply(text: string): { d2: string; kind: string; title: string; recommend?: string } | undefined {
-  const blocks = [...text.matchAll(/```d2\s*\n([\s\S]*?)```/g)]
+type Parsed = ({ d2: string } | { markdown: string }) & { kind: string; title: string; recommend?: string }
+
+export function parseReply(text: string): Parsed | undefined {
+  const blocks = [...text.matchAll(/```(d2|md)\s*\n([\s\S]*?)```/g)]
   if (blocks.length !== 1) return undefined
   const line = (name: string) => new RegExp(`^${name}:[ \\t]*(.+)$`, 'm').exec(text)?.[1]?.trim()
   const kind = line('KIND')
   const title = line('TITLE')
   if (!kind || !title) return undefined
   const recommend = line('RECOMMEND')
-  return { d2: blocks[0]![1]!.trim(), kind, title, ...(recommend ? { recommend } : {}) }
+  const body = blocks[0]![2]!.trim()
+  return { ...(blocks[0]![1] === 'md' ? { markdown: body } : { d2: body }), kind, title, ...(recommend ? { recommend } : {}) }
+}
+
+// fork の返事は信頼の境界の外。ペインの Markdown はリンクを押せるので、リンク・画像・URL・HTML を落として文字だけ残す
+export function plainMarkdown(md: string): string {
+  return md
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\b(?:https?|file|ftp):\/\/\S+/gi, '')
+    .replace(/\bwww\.\S+/gi, '')
+    .split('\n')
+    .slice(0, MAX_MARKDOWN_LINES)
+    .join('\n')
+    .trim()
 }
 
 // fork の返事は信頼の境界の外。手元のファイルや外部の URL を読ませる書き方を拒む（計画のレビュー 2）。
@@ -92,13 +115,15 @@ export function themed(d2: string): string {
 function buildPrompt(input: DrawInput, feedback?: string): string {
   const kinds = input.candidates.slice(0, 3).map(c => kindById(c.id)).filter(k => k !== undefined)
   return [
-    'Draw ONE diagram for the side pane, about the current conversation.',
+    'Show the target ONE way in the side pane, about the current conversation: a diagram or a list.',
     TRIGGER_TEXT[input.trigger],
     '',
     'Target:',
     JSON.stringify(input.text),
     '',
-    'Suggested diagram kinds (most likely first). You may pick any of them:',
+    'First decide the form. Draw a diagram only when the main point of the target is a flow, a branch, a structure or relations that arrows or nesting show. Otherwise (findings, states, to-dos, steps already done, a comparison of options), reply with a ```md list or table, as described in the rules below.',
+    '',
+    'If you draw a diagram, these kinds are suggested (most likely first). You may pick any of them:',
     ...input.candidates.slice(0, 3).map((c, i) => {
       const kind = kinds[i]!
       return `- ${kind.id} (p=${c.p.toFixed(2)}): ${kind.when.en}\n  Example:\n${kind.sample.replace(/^/gm, '    ')}`
@@ -115,7 +140,7 @@ function buildPrompt(input: DrawInput, feedback?: string): string {
     '- The reader must get the point from the diagram alone. Put the conclusion of the target in TITLE as one sentence, not a topic name.',
     '- Write each label so it keeps its subject: what was checked or what it is, then the result (e.g. "29 settings files checked → 0 secrets"). Do not cut a label down to a fragment that only makes sense next to the target.',
     '- When items have a state, start the label with a mark: ✓ done or fine, ! needs action, ? not checked. Use the same mark for the same state everywhere.',
-    '- Unless this is a session overview, do not stack unconnected boxes. If the items have no relations to draw as arrows, use a comparison or matrix layout instead.',
+    '- If the items have no order, cause or flow between them (findings, states, to-dos, or a comparison of options), do not draw a diagram. Reply with a ```md block instead: a heading per group and one bullet per item that starts with its state mark, or a table for a comparison. At most 15 lines, no links. Use KIND: list or KIND: table.',
     // 1 行 20 字では幅 455px になり、ペインで縮む。2 行・16 字なら 261px（2026-11-13 に d2 0.9 で実測）
     `- At most 12 boxes. Labels: at most 2 lines (split with \\n), each line at most ${input.lang === 'ja' ? 16 : 30} characters.`,
     '- No colors, styles, icons, imports or URLs. The only exceptions are the dashed edge above and the state marks.',
@@ -125,7 +150,8 @@ function buildPrompt(input: DrawInput, feedback?: string): string {
     '```d2',
     '<your D2>',
     '```',
-    'KIND: <the kind id you used>',
+    '(or one ```md block instead, as above)',
+    'KIND: <the kind id you used, or list or table>',
     'TITLE: <the conclusion of the target, one sentence>',
     ...(input.trigger === 'question' ? ['RECOMMEND: <the option you recommend and why, one line>'] : []),
     ...(feedback ? ['', `Your previous reply was rejected: ${feedback}`, 'Fix it and reply again in the same format.'] : []),
@@ -161,6 +187,16 @@ export async function draw(io: DrawIO, input: DrawInput): Promise<DrawResult> {
     const reply = await io.fork(buildPrompt(input, feedback))
     if (!reply.isAnswered) return { ok: false, reason: reply.reason === 'nothing-to-fork' ? 'nothing-to-fork' : 'fork-failed' }
     const parsed = parseReply(reply.text)
+    if (parsed && 'markdown' in parsed) {
+      const markdown = plainMarkdown(parsed.markdown)
+      if (TEXT_KINDS.includes(parsed.kind) && markdown) {
+        const { kind, title, recommend } = parsed
+        return { ok: true, figure: { kind: kind as TextKind, title, ...(recommend ? { recommend } : {}), svg: '', ascii: markdown, d2: '', markdown } }
+      }
+      last = 'invalid-reply'
+      feedback = 'a ```md block must come with KIND: list or KIND: table and must not be empty'
+      continue
+    }
     if (!parsed || !kindById(parsed.kind)) {
       last = 'invalid-reply'
       feedback = 'it must contain exactly one ```d2 code block and the KIND and TITLE lines, with KIND one of the suggested kind ids'

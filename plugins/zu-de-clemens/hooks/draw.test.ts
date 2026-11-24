@@ -141,7 +141,8 @@ test('fork への指示に、結論・主語・状態の記号・関係のない
   expect(prompts[0]!.includes('TITLE: <the conclusion of the target, one sentence>')).toBe(true)
   expect(prompts[0]!.includes('keeps its subject')).toBe(true)
   expect(prompts[0]!.includes('✓ done or fine, ! needs action, ? not checked')).toBe(true)
-  expect(prompts[0]!.includes('do not stack unconnected boxes')).toBe(true)
+  // 関係のない項目は、箱を積まずに一覧・表にする（2026-11-24 に比較表・格子への誘導から置き換え）
+  expect(prompts[0]!.includes('do not draw a diagram. Reply with a ```md block instead')).toBe(true)
 })
 
 test('ラベルは 2 行まで。1 行の文字数は日本語 16・英語 30', async () => {
@@ -214,4 +215,43 @@ test('fork への指示で、grid-columns は矢印のない図に限る（#4）
   const { io, prompts } = fakeIO([{ text: GOOD }])
   await draw(io, input)
   expect(prompts[0]!.includes('Never use grid-columns in a diagram with arrows')).toBe(true)
+})
+
+// 一覧・表（Markdown）: 流れのない返答は図にせず、ペインの Markdown で出す（2026-11-24 の試作）
+const LIST = '```md\n## 原因\n- ! 返答を写さなかった\n## 今の状態\n- ✓ 戻せる\n```\nKIND: list\nTITLE: 取り違えたのは私'
+
+test('parseReply は md のブロックと KIND: list を取り出す', async () => {
+  expect(parseReply(LIST)).toEqual({ markdown: '## 原因\n- ! 返答を写さなかった\n## 今の状態\n- ✓ 戻せる', kind: 'list', title: '取り違えたのは私' })
+  expect(parseReply('```md\na\n```\n```d2\nb\n```\nKIND: list\nTITLE: t')).toBe(undefined)
+})
+
+test('一覧の返事は D2 を通さずに、Markdown の図として返す', async () => {
+  const { io, runs } = fakeIO([{ text: LIST }])
+  const result = await draw(io, { ...input, trigger: 'answer' })
+  expect(result.ok && result.figure.kind).toBe('list')
+  expect(result.ok && result.figure.markdown).toBe('## 原因\n- ! 返答を写さなかった\n## 今の状態\n- ✓ 戻せる')
+  expect(result.ok && result.figure.svg).toBe('')
+  expect(renders(runs).length).toBe(0)
+})
+
+test('一覧の KIND が list・table 以外なら書き直させる', async () => {
+  const { io, prompts } = fakeIO([{ text: LIST.replace('KIND: list', 'KIND: chart') }, { text: LIST }])
+  const result = await draw(io, { ...input, trigger: 'answer' })
+  expect(result.ok).toBe(true)
+  expect(prompts.length).toBe(2)
+})
+
+test('一覧の中のリンク・画像・URL・HTML のタグは取り除く', async () => {
+  const bad = '```md\n- [公式](https://e.com/x) を見る\n- ![図](http://e.com/a.png)\n- <img src=x onerror=y>あ\n- 詳しくは https://e.com/y\n- 別に www.e.com/z も\n```\nKIND: list\nTITLE: t'
+  const result = await draw(fakeIO([{ text: bad }]).io, { ...input, trigger: 'answer' })
+  const md = result.ok ? result.figure.markdown ?? '' : ''
+  expect(/https?:|www\.|\]\(|<img|onerror/.test(md)).toBe(false)
+  expect(md.includes('公式 を見る')).toBe(true)
+})
+
+test('依頼文に一覧・表の選択肢があり、「比較表か格子にする」の規則は外れている', async () => {
+  const { io, prompts } = fakeIO([{ text: GOOD }])
+  await draw(io, input)
+  expect(prompts[0]!.includes('```md')).toBe(true)
+  expect(prompts[0]!.includes('use a comparison or matrix layout instead')).toBe(false)
 })

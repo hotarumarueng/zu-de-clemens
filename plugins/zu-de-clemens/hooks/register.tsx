@@ -93,13 +93,13 @@ async function guide($: EngineInterface, seq: number, lang: View['lang'], messag
 }
 
 /** 手動（#5）・描き直し（#6）のときの描き方。描き直しは利用者の指示と前の D2 を fork への依頼の末尾に足す */
-type DrawHow = { reaction?: 'manual' | 'redraw'; instruction?: string; previous?: string }
+type DrawHow = { reaction?: 'manual' | 'redraw'; instruction?: string; previous?: { format: 'd2' | 'md'; body: string } }
 
-function redrawNote(instruction: string, previous: string | undefined): string {
+function redrawNote(instruction: string, previous: DrawHow['previous']): string {
   return [
     '',
     'The user looked at the diagram drawn for this target and asked for a redraw.',
-    ...(previous ? ['Previous diagram:', '```d2', previous, '```'] : []),
+    ...(previous ? ['Previous diagram:', '```' + previous.format, previous.body, '```'] : []),
     `The user's instruction (follow it, and keep the rules above): ${JSON.stringify(instruction)}`,
   ].join('\n')
 }
@@ -202,7 +202,7 @@ async function redraw($: EngineInterface, options: Options, instruction: string)
   const text = instruction.trim().slice(0, 1000)
   const v = await read($, view)
   if (!text || v.state !== 'figure' || !v.figure) return
-  await startDraw($, options, v.seq, { reaction: 'redraw', instruction: text, ...(v.figure.d2 ? { previous: v.figure.d2 } : {}) })
+  await startDraw($, options, v.seq, { reaction: 'redraw', instruction: text, ...(v.figure.markdown ? { previous: { format: 'md' as const, body: v.figure.markdown } } : v.figure.d2 ? { previous: { format: 'd2' as const, body: v.figure.d2 } } : {}) })
 }
 
 // ペインの幅では読めない図を、図を埋め込んだ HTML にして既定のブラウザで開く（#3。拡大・移動は viewer.ts）。
