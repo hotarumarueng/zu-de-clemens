@@ -198,3 +198,20 @@ test('描く図にはライトとダークの配色が付き、安全の検査�
   expect(result.ok && result.figure.d2.includes('theme-overrides') && result.figure.d2.includes('dark-theme-overrides')).toBe(true)
   expect(renders(runs).every(r => r.stdin?.includes('B1: "#6A3FC1"') && r.stdin.includes('B1: "#5FE3FF"'))).toBe(true)
 })
+
+// 格子（grid-columns）の中の矢印は ELK を通らず直線で引かれ、箱を貫いて文字が重なる（#4）
+test('矢印のある図からは grid-columns を外し、矢印のない整理の図には残す', async () => {
+  const nested = '```d2\nmac: Mac {\n  grid-columns: 1\n  a: A\n  b: B\n}\nsrv: Server {\n  grid-rows: 2\n  p: P\n}\nmac.a -> srv.p: copy\n```\nKIND: containment\nTITLE: t'
+  const withEdges = await draw(fakeIO([{ text: nested }]).io, { ...input, trigger: 'answer', candidates: [{ id: 'containment', p: 0.9 }] })
+  expect(withEdges.ok && /grid-(columns|rows)/.test(withEdges.figure.d2)).toBe(false)
+  expect(withEdges.ok && withEdges.figure.d2.includes('mac.a -> srv.p: copy')).toBe(true)
+  const status = '```d2\ngrid-columns: 1\nt: Topic {\n  grid-columns: 1\n  d: "✓ Decided"\n}\n```\nKIND: status\nTITLE: t'
+  const summary = await draw(fakeIO([{ text: status }]).io, { ...input, trigger: 'prompt', candidates: [{ id: 'status', p: 1 }] })
+  expect(summary.ok && summary.figure.d2.match(/grid-columns: 1/g)?.length).toBe(2)
+})
+
+test('fork への指示で、grid-columns は矢印のない図に限る（#4）', async () => {
+  const { io, prompts } = fakeIO([{ text: GOOD }])
+  await draw(io, input)
+  expect(prompts[0]!.includes('Never use grid-columns in a diagram with arrows')).toBe(true)
+})
