@@ -494,3 +494,17 @@ test('描き直しの入力欄は空なら何もせず、別置きの［描き�
   expect(w.forks).toBe(1)
   expect(await ui.find({ key: 'redrawButton' })).toBeUndefined()
 })
+
+// 一覧・表は Markdown で描き、［大きく開く］は出さない（2026-11-24 の試作）
+test('一覧の図はデスクトップで Markdown として描き、［大きく開く］を出さない', { options: OPTIONS }, async ($, on) => {
+  const ctx = world(on, { forkReply: '```md\n## 原因\n- ! a\n```\nKIND: list\nTITLE: 一覧の題' })
+  await ask($)
+  await ctx.settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await ctx.settle()
+  expect(await ui.find({ text: /一覧の題/ })).toBeDefined()
+  const fig = await ui.find({ key: 'figure' })
+  expect((fig as { type?: string } | undefined)?.type).toBe('Markdown')
+  expect(await ui.find({ key: 'open' })).toBeUndefined()
+})

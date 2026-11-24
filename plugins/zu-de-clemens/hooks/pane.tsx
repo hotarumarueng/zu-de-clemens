@@ -21,6 +21,11 @@ const PROPOSAL_KEY: Record<NonNullable<View['trigger']>, StringKey> = {
 }
 
 // d2 の SVG は幅の属性を持たず、指定しないとペインいっぱいに拡大される（タスク 0 で確認）。
+const TEXT_KIND_NAME: Record<View['lang'], Record<string, string>> = {
+  ja: { list: '一覧', table: '表' },
+  en: { list: 'List', table: 'Table' },
+}
+
 export function svgWidth(svg: string): number | undefined {
   const width = Number(/viewBox="[-\d.]+ [-\d.]+ ([\d.]+)/.exec(svg)?.[1])
   return Number.isFinite(width) && width > 0 ? Math.round(width) : undefined
@@ -29,7 +34,7 @@ export function svgWidth(svg: string): number | undefined {
 export function renderPane($: EngineInterface, e: RenderInput<'Pane'>, view: View, actions: PaneActions) {
   const { Box, Text, Button, Input } = $.ui.resolve(e)
   const lang = view.lang
-  const kindName = (id: string) => kindById(id)?.name[lang] ?? id
+  const kindName = (id: string) => kindById(id)?.name[lang] ?? TEXT_KIND_NAME[lang][id] ?? id
   // しきい値未満だった直近のきっかけを、利用者が頼めば図にできるようにする（#5）
   const manual = view.latest && (
     <Box key="manualRow" flexDirection="column" gap={1}>
@@ -63,7 +68,11 @@ export function renderPane($: EngineInterface, e: RenderInput<'Pane'>, view: Vie
   if (view.state === 'figure' && view.figure) {
     const figure = view.figure
     let picture
-    if (e.surface === 'desktop') {
+    if (figure.markdown && e.surface === 'desktop') {
+      // 一覧・表はペインの Markdown で描く。縮められないので本文と同じ大きさの文字で出る
+      const { Markdown } = $.ui.resolve(e)
+      picture = <Markdown key="figure" text={figure.markdown} />
+    } else if (e.surface === 'desktop') {
       const { Svg } = $.ui.resolve(e)
       const width = svgWidth(figure.svg)
       picture = <Svg key="figure" source={figure.svg} alt={figure.title} {...(width ? { width } : {})} />
@@ -80,9 +89,11 @@ export function renderPane($: EngineInterface, e: RenderInput<'Pane'>, view: Vie
           {'  '}
           {t(lang, 'probability', { p: (view.probability ?? 0).toFixed(2) })}
         </Text>
-        <Box flexDirection="row" flexWrap="wrap" gap={2}>
-          <Button key="open" variant="secondary" label={t(lang, 'open')} onPress={() => actions.open()} />
-        </Box>
+        {figure.svg && (
+          <Box key="openRow" flexDirection="row" flexWrap="wrap" gap={2}>
+            <Button key="open" variant="secondary" label={t(lang, 'open')} onPress={() => actions.open()} />
+          </Box>
+        )}
         <Input
           key="redraw"
           placeholder={t(lang, 'redrawPlaceholder')}
