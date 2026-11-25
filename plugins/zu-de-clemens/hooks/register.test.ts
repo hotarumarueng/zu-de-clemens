@@ -496,7 +496,7 @@ test('描き直しの入力欄は空なら何もせず、別置きの［描き�
 })
 
 // 一覧・表は Markdown で描き、［大きく開く］は出さない（2026-11-24 の試作）
-test('一覧の図はデスクトップで Markdown として描き、［大きく開く］を出さない', { options: OPTIONS }, async ($, on) => {
+test('一覧の図には［大きく開く］を出さない', { options: OPTIONS }, async ($, on) => {
   const ctx = world(on, { forkReply: '```md\n## 原因\n- ! a\n```\nKIND: list\nTITLE: 一覧の題' })
   await ask($)
   await ctx.settle()
@@ -505,6 +505,152 @@ test('一覧の図はデスクトップで Markdown として描き、［大き�
   await ctx.settle()
   expect(await ui.find({ text: /一覧の題/ })).toBeDefined()
   const fig = await ui.find({ key: 'figure' })
-  expect((fig as { type?: string } | undefined)?.type).toBe('Markdown')
+  expect(fig).toBeDefined()
   expect(await ui.find({ key: 'open' })).toBeUndefined()
+})
+
+// 一覧はペインの部品で組み、印は色の札にする（2026-11-24）
+test('一覧の図は Markdown でなく部品で組み、印の文字を出さずに札で示す', { options: OPTIONS }, async ($, on) => {
+  const ctx = world(on, { forkReply: '```md\n## ! 原因\n- ! 権限が足りない\n- ✓ 型は通過\n```\nKIND: list\nTITLE: 一覧の題' })
+  await ask($)
+  await ctx.settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await ctx.settle()
+  expect((await ui.find({ key: 'figure' }) as { type?: string } | undefined)?.type).not.toBe('Markdown')
+  expect(await ui.find({ text: '権限が足りない' })).toBeDefined()
+  expect(await ui.find({ text: /^! / })).toBeUndefined()
+  expect(await ui.find({ text: /要対応/ })).toBeDefined()
+})
+
+test('印のある D2 の図には、色の意味の凡例を出す', { options: OPTIONS }, async ($, on) => {
+  const ctx = world(on, { forkReply: '```d2\na: "! 権限"\nb: ✓ 通過\na -> b\n```\nKIND: flow\nTITLE: 題' })
+  await ask($)
+  await ctx.settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await ctx.settle()
+  expect(await ui.find({ text: /枠の色：緑＝済み/ })).toBeDefined()
+})
+
+// 列や行に並べる種類は、種類ごとにペインの部品で組む（2026-11-24）
+const drawWith = async ($: any, on: On, reply: string) => {
+  const ctx = world(on, { forkReply: reply })
+  await ask($)
+  await ctx.settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await ctx.settle()
+  return ui
+}
+
+test('タイムラインは時刻と出来事を分けて並べる', { options: OPTIONS }, async ($, on) => {
+  const ui = await drawWith($, on, '```md\n- 10:02 | デプロイ\n- 10:05 | エラーが増えた\n```\nKIND: timeline\nTITLE: 障害の流れ')
+  expect(await ui.find({ text: '10:02' })).toBeDefined()
+  expect(await ui.find({ text: 'デプロイ' })).toBeDefined()
+  expect(await ui.find({ text: /\|/ })).toBeUndefined()
+})
+
+test('カンバンは段階ごとの列に分け、長所と短所も 2 列で並べる', { options: OPTIONS }, async ($, on) => {
+  const ui = await drawWith($, on, '```md\n## 未着手\n- 権限\n## 進行中\n- 決済\n```\nKIND: kanban\nTITLE: 作業の状況')
+  expect(await ui.find({ key: 'col0' })).toBeDefined()
+  expect(await ui.find({ key: 'col1' })).toBeDefined()
+  expect(await ui.find({ text: '決済' })).toBeDefined()
+})
+
+// 表も部品で組み、セルの先頭の印を札にする。Markdown のままだと「!」が文字で出た（2026-11-24 実機）
+test('表は部品で組み、セルの印の文字を出さずに札で示す', { options: OPTIONS }, async ($, on) => {
+  const ui = await drawWith($, on, '```md\n| | 案A | 案C |\n|---|---|---|\n| 形 | 受け箱を1つに | 写しのまま |\n| 事実 | ✓ 正本へ戻る | ! 戻らない |\n```\nKIND: table\nTITLE: 案の比べ')
+  expect((await ui.find({ key: 'figure' }) as { type?: string } | undefined)?.type).not.toBe('Markdown')
+  expect(await ui.find({ text: '案A' })).toBeDefined()
+  expect(await ui.find({ text: '戻らない' })).toBeDefined()
+  expect(await ui.find({ text: /^[!✓] / })).toBeUndefined()
+  expect(await ui.find({ text: /\|/ })).toBeUndefined()
+  expect(await ui.find({ text: /要対応/ })).toBeDefined()
+})
+
+// 図の中の問いに返答を書き、本スレッドの入力欄へまとめて入れる（2026-11-25）
+// 質問から描いた図では返答欄を出さないので、応答をきっかけにする
+const drawAnswer = async ($: any, on: On, reply: string) => {
+  const ctx = world(on, { forkReply: reply })
+  await complete($)
+  await ctx.settle()
+  const ui = await mountPane($, 'desktop')
+  await ui.press({ key: 'draw' })
+  await ctx.settle()
+  return ui
+}
+const REPLY_LIST = '```md\n## 案A\n- ✓ 正本へ戻る\n## 案C\n- ! 戻らない\n```\nKIND: list\nTITLE: 案を選ぶ\nREPLY: 案C | 案Cでよいですか？\nREPLY: | どちらで進めますか？\nREPLY: | 期限は？'
+
+test('返答欄は見出しのある問いをその直下に、見出しのない問いを図の下に出す', { options: OPTIONS }, async ($, on) => {
+  const ui = await drawAnswer($, on, REPLY_LIST)
+  expect(await ui.find({ key: 'reply0' })).toBeDefined()
+  expect(await ui.find({ key: 'reply1' })).toBeDefined()
+  expect(await ui.find({ key: 'reply2' })).toBeDefined()
+  expect(await ui.find({ key: 'g1replies' })).toBeDefined()
+  expect(await ui.find({ key: 'replies' })).toBeDefined()
+  expect(await ui.find({ text: /案Cでよいですか/ })).toBeDefined()
+})
+
+test('返答を書いて［入力欄に入れる］を押すと、書いた問いだけが「問い → 返答」で入る', { options: OPTIONS }, async ($, on) => {
+  const filled: string[] = []
+  const copied: string[] = []
+  on('prompt.fill', async (_$, e) => { filled.push(e.text); return { isFilled: true } as never })
+  on('ui.copy', async (_$, e) => { copied.push(e.text); return { value: { isCopied: true } } as never })
+  const ui = await drawAnswer($, on, REPLY_LIST)
+  expect(await ui.find({ key: 'fillReplies' })).toBeUndefined()
+  await $.ui.input({ plugin: PLUGIN, key: 'reply0', text: 'はい', kind: 'change', surface: 'desktop' })
+  await $.ui.input({ plugin: PLUGIN, key: 'reply2', text: '金曜', kind: 'change', surface: 'desktop' })
+  await ui.press({ key: 'fillReplies' })
+  expect(filled).toEqual(['「案Cでよいですか？」→ はい\n「期限は？」→ 金曜'])
+  await ui.press({ key: 'copyReplies' })
+  expect(copied).toEqual(['「案Cでよいですか？」→ はい\n「期限は？」→ 金曜'])
+  expect(await ui.find({ text: /コピーしました/ })).toBeDefined()
+})
+
+test('入れられなかったときは、コピーを促す', { options: OPTIONS }, async ($, on) => {
+  on('prompt.fill', async () => ({ isFilled: false }) as never)
+  const ui = await drawAnswer($, on, REPLY_LIST)
+  await $.ui.input({ plugin: PLUGIN, key: 'reply1', text: '案A', kind: 'change', surface: 'desktop' })
+  await ui.press({ key: 'fillReplies' })
+  expect(await ui.find({ text: /入力欄に入れられませんでした/ })).toBeDefined()
+})
+
+// 部品で組む図は、まとまり・セル・出来事を角丸の枠で囲み、図らしく見せる（2026-11-25 本人の要望）
+const framed = async (ui: any, key: string) => ((await ui.find({ key })) as { props?: Record<string, unknown> } | undefined)?.props?.borderStyle
+
+test('一覧はまとまりごとに枠のカードにし、問いと返答欄をそのカードの中に置く', { options: OPTIONS }, async ($, on) => {
+  const ui = await drawAnswer($, on, REPLY_LIST)
+  expect(await framed(ui, 'g0')).toBe('round')
+  expect(await framed(ui, 'g1')).toBe('round')
+  // 既定の枠の色はダークの背景とのコントラストが約 1.1:1 で見えなかった（2026-11-26 実機）
+  expect(((await ui.find({ key: 'g0' })) as { props: Record<string, unknown> }).props.borderColor).toBe('inactive')
+  expect((await ui.find({ key: 'g1' }))?.text).toMatch(/案Cでよいですか/)
+  expect((await ui.find({ key: 'g0' }))?.text).not.toMatch(/案Cでよいですか/)
+})
+
+test('見出しに属さない問いは「返答が要る問い」のカードにまとめ、ボタンもその中に置く', { options: OPTIONS }, async ($, on) => {
+  const ui = await drawAnswer($, on, REPLY_LIST)
+  expect(await framed(ui, 'replies')).toBe('round')
+  expect((await ui.find({ key: 'replies' }))?.text).toMatch(/返答が要る問い/)
+  await $.ui.input({ plugin: PLUGIN, key: 'reply1', text: '案A', kind: 'change', surface: 'desktop' })
+  expect((await ui.find({ key: 'replies' }))?.text).toMatch(/返答を入力欄に入れる/)
+})
+
+// セルごとに枠を付けると、横と縦のどちらに読むのか分からなかった（2026-11-26 本人）。行を 1 本の枠で囲み、横に読ませる
+test('表は行ごとに 1 本の枠で囲み、セルには枠を付けない。見出しの行の枠は色で分ける', { options: OPTIONS }, async ($, on) => {
+  const ui = await drawWith($, on, '```md\n| | 案A | 案C |\n|---|---|---|\n| 形 | 受け箱を1つに | 写しのまま |\n```\nKIND: table\nTITLE: 案の比べ')
+  expect(await framed(ui, 'r0')).toBe('round')
+  expect(await framed(ui, 'r1')).toBe('round')
+  expect(((await ui.find({ key: 'r0' })) as { props: Record<string, unknown> }).props.borderColor).toBe('claude')
+  expect(((await ui.find({ key: 'r1' })) as { props: Record<string, unknown> }).props.borderColor).toBe('inactive')
+  expect(await framed(ui, 'c1-2')).toBeUndefined()
+})
+
+test('時系列は出来事ごとに枠のカードにし、間を矢印でつなぐ', { options: OPTIONS }, async ($, on) => {
+  const ui = await drawWith($, on, '```md\n- 10:02 | デプロイ\n- 10:05 | エラーが増えた\n```\nKIND: timeline\nTITLE: 障害の流れ')
+  expect(await framed(ui, 'r0')).toBe('round')
+  expect(((await ui.find({ key: 'r0' })) as { props: Record<string, unknown> }).props.borderColor).toBe('inactive')
+  expect(await framed(ui, 'r1')).toBe('round')
+  expect(await ui.findAll({ type: 'Text', text: '↓' })).toHaveLength(1)
 })

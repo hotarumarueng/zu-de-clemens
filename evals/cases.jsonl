@@ -1,30 +1,62 @@
-{"id":"c01","trigger":"question","text":"DB はどれにしますか？\n1. DynamoDB：サーバーレスで安い\n2. RDS（PostgreSQL）：SQL が使える\n3. Aurora Serverless：自動で伸縮","recent_prompts":[],"label":"want","kind":"comparison"}
-{"id":"c02","trigger":"question","text":"コミットメッセージは日本語と英語のどちらにしますか？\n1. 日本語\n2. 英語","recent_prompts":[],"label":"no","kind":null}
-{"id":"c03","trigger":"question","text":"認証の方式はどれにしますか？\n1. Cognito でユーザープールを作る\n2. Auth0 を使う\n3. 自前で JWT を発行する","recent_prompts":[],"label":"want","kind":"comparison"}
-{"id":"c04","trigger":"question","text":"このファイル名でよいですか？\n1. はい\n2. いいえ、変える","recent_prompts":[],"label":"no","kind":null}
-{"id":"c05","trigger":"question","text":"ログの保存先はどこにしますか？\n1. CloudWatch Logs に直接送る\n2. S3 に貯めて Athena で読む\n3. Firehose 経由で OpenSearch に入れる","recent_prompts":[],"label":"want","kind":"comparison"}
-{"id":"c06","trigger":"question","text":"テストを今回足しますか？\n1. 足す\n2. あとで","recent_prompts":[],"label":"no","kind":null}
-{"id":"c07","trigger":"question","text":"モノレポにするか、リポジトリを分けますか？\n1. モノレポ（フロント・API・インフラを 1 つに）\n2. 3 つに分ける","recent_prompts":[],"label":"want","kind":"comparison"}
-{"id":"c08","trigger":"answer","text":"IAM のポリシーは、ユーザーやロールに付けたものと、リソース側に付けたもの（バケットポリシーなど）の両方で評価されます。どちらかで明示的に拒否されると、もう片方で許可されていても拒否になります。さらに、組織の SCP が上限を決めます。","recent_prompts":[],"label":"want","kind":"decision"}
-{"id":"c09","trigger":"answer","text":"はい、そのコマンドで大丈夫です。","recent_prompts":[],"label":"no","kind":null}
-{"id":"c10","trigger":"answer","text":"リクエストはまず CloudFront に届き、静的ファイルなら S3 から返します。API のパスなら API Gateway に転送され、Lambda が DynamoDB を読んで結果を返します。","recent_prompts":[],"label":"want","kind":"flow"}
-{"id":"c11","trigger":"answer","text":"D2 は、図をテキストで書くための言語です。箱と矢印の関係を書くと、ツールが図に変えてくれます。","recent_prompts":[],"label":"no","kind":null}
-{"id":"c12","trigger":"answer","text":"ログインの確認を1つの関数にまとめて、トップページと設定ページの両方から呼ぶようにしました。","recent_prompts":[],"label":"want","kind":"hub"}
-{"id":"c13","trigger":"answer","text":"VPC の中にパブリックサブネットとプライベートサブネットを作り、ALB はパブリック、ECS のタスクと RDS はプライベートに置きます。プライベートからの外向き通信は NAT Gateway を通します。","recent_prompts":[],"label":"want","kind":"containment"}
-{"id":"c14","trigger":"answer","text":"エラーの原因は、環境変数の名前の打ち間違いでした。TYPESAFE_APIKEY を TYPESAFE_API_KEY に直せば動きます。","recent_prompts":[],"label":"no","kind":null}
-{"id":"c15","trigger":"prompt","text":"今このセッションどうなってる？","recent_prompts":[],"label":"want","kind":"status"}
-{"id":"c16","trigger":"prompt","text":"話があちこち行ったけど、結局何が決まった？","recent_prompts":[],"label":"want","kind":"status"}
-{"id":"c17","trigger":"prompt","text":"D2って何？","recent_prompts":[],"label":"no","kind":null}
-{"id":"c18","trigger":"prompt","text":"A案で進めて","recent_prompts":[],"label":"no","kind":null}
-{"id":"c19","trigger":"prompt","text":"どこまで終わったっけ","recent_prompts":[],"label":"want","kind":"status"}
-{"id":"c20","trigger":"prompt","text":"この関数のエラーどうなってる？","recent_prompts":[],"label":"no","kind":null}
-{"id":"c21","trigger":"question","text":"Which queue should we use?\n1. SQS standard\n2. SQS FIFO\n3. EventBridge","recent_prompts":[],"label":"want","kind":"comparison"}
-{"id":"c22","trigger":"question","text":"Should I run the formatter now?\n1. Yes\n2. No","recent_prompts":[],"label":"no","kind":null}
-{"id":"c23","trigger":"answer","text":"A request first hits the load balancer, which forwards it to one of three app servers. Each app server reads from a shared Redis cache and falls back to Postgres on a miss; writes go to Postgres and invalidate the cache.","recent_prompts":[],"label":"want","kind":"flow"}
-{"id":"c24","trigger":"answer","text":"Done. I renamed the variable.","recent_prompts":[],"label":"no","kind":null}
-{"id":"c25","trigger":"answer","text":"Kubernetes namespaces hold deployments, which create replica sets, which create pods; a service selects pods by label and an ingress routes outside traffic to services.","recent_prompts":[],"label":"want","kind":"containment"}
-{"id":"c26","trigger":"answer","text":"The test failed because the fixture date was in the past.","recent_prompts":[],"label":"no","kind":null}
-{"id":"c27","trigger":"prompt","text":"Where are we with this session?","recent_prompts":[],"label":"want","kind":"status"}
-{"id":"c28","trigger":"prompt","text":"What is a VPC?","recent_prompts":[],"label":"no","kind":null}
-{"id":"c29","trigger":"prompt","text":"Can you summarize what we decided and what is still open?","recent_prompts":[],"label":"want","kind":"status"}
-{"id":"c30","trigger":"prompt","text":"Run the tests again","recent_prompts":[],"label":"no","kind":null}
+{"id": "c01", "trigger": "question", "text": "DB はどれにしますか？\n1. DynamoDB：サーバーレスで安い\n2. RDS（PostgreSQL）：SQL が使える\n3. Aurora Serverless：自動で伸縮", "recent_prompts": [], "label": "want", "kind": "comparison", "expect": "comparison", "structure": ["compare"]}
+{"id": "c02", "trigger": "question", "text": "コミットメッセージは日本語と英語のどちらにしますか？\n1. 日本語\n2. 英語", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c03", "trigger": "question", "text": "認証の方式はどれにしますか？\n1. Cognito でユーザープールを作る\n2. Auth0 を使う\n3. 自前で JWT を発行する", "recent_prompts": [], "label": "want", "kind": "comparison", "expect": "comparison", "structure": ["compare"]}
+{"id": "c04", "trigger": "question", "text": "このファイル名でよいですか？\n1. はい\n2. いいえ、変える", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c05", "trigger": "question", "text": "ログの保存先はどこにしますか？\n1. CloudWatch Logs に直接送る\n2. S3 に貯めて Athena で読む\n3. Firehose 経由で OpenSearch に入れる", "recent_prompts": [], "label": "want", "kind": "comparison", "expect": "comparison", "structure": ["compare"]}
+{"id": "c06", "trigger": "question", "text": "テストを今回足しますか？\n1. 足す\n2. あとで", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c07", "trigger": "question", "text": "モノレポにするか、リポジトリを分けますか？\n1. モノレポ（フロント・API・インフラを 1 つに）\n2. 3 つに分ける", "recent_prompts": [], "label": "want", "kind": "comparison", "expect": "comparison", "structure": ["compare"]}
+{"id": "c08", "trigger": "answer", "text": "IAM のポリシーは、ユーザーやロールに付けたものと、リソース側に付けたもの（バケットポリシーなど）の両方で評価されます。どちらかで明示的に拒否されると、もう片方で許可されていても拒否になります。さらに、組織の SCP が上限を決めます。", "recent_prompts": [], "label": "want", "kind": "decision", "expect": "decision", "structure": ["branch"]}
+{"id": "c09", "trigger": "answer", "text": "はい、そのコマンドで大丈夫です。", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c10", "trigger": "answer", "text": "リクエストはまず CloudFront に届き、静的ファイルなら S3 から返します。API のパスなら API Gateway に転送され、Lambda が DynamoDB を読んで結果を返します。", "recent_prompts": [], "label": "want", "kind": "flow", "expect": "flow", "structure": ["order", "branch"]}
+{"id": "c11", "trigger": "answer", "text": "D2 は、図をテキストで書くための言語です。箱と矢印の関係を書くと、ツールが図に変えてくれます。", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c12", "trigger": "answer", "text": "ログインの確認を1つの関数にまとめて、トップページと設定ページの両方から呼ぶようにしました。", "recent_prompts": [], "label": "want", "kind": "hub", "expect": "hub", "structure": ["relation"]}
+{"id": "c13", "trigger": "answer", "text": "VPC の中にパブリックサブネットとプライベートサブネットを作り、ALB はパブリック、ECS のタスクと RDS はプライベートに置きます。プライベートからの外向き通信は NAT Gateway を通します。", "recent_prompts": [], "label": "want", "kind": "containment", "expect": "containment", "structure": ["whole_part"]}
+{"id": "c14", "trigger": "answer", "text": "エラーの原因は、環境変数の名前の打ち間違いでした。TYPESAFE_APIKEY を TYPESAFE_API_KEY に直せば動きます。", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c15", "trigger": "prompt", "text": "今このセッションどうなってる？", "recent_prompts": [], "label": "want", "kind": "status", "expect": "status", "structure": ["groups"]}
+{"id": "c16", "trigger": "prompt", "text": "話があちこち行ったけど、結局何が決まった？", "recent_prompts": [], "label": "want", "kind": "status", "expect": "status", "structure": ["groups"]}
+{"id": "c17", "trigger": "prompt", "text": "D2って何？", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c18", "trigger": "prompt", "text": "A案で進めて", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c19", "trigger": "prompt", "text": "どこまで終わったっけ", "recent_prompts": [], "label": "want", "kind": "status", "expect": "status", "structure": ["groups"]}
+{"id": "c20", "trigger": "prompt", "text": "この関数のエラーどうなってる？", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c21", "trigger": "question", "text": "Which queue should we use?\n1. SQS standard\n2. SQS FIFO\n3. EventBridge", "recent_prompts": [], "label": "want", "kind": "comparison", "expect": "comparison", "structure": ["compare"]}
+{"id": "c22", "trigger": "question", "text": "Should I run the formatter now?\n1. Yes\n2. No", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c23", "trigger": "answer", "text": "A request first hits the load balancer, which forwards it to one of three app servers. Each app server reads from a shared Redis cache and falls back to Postgres on a miss; writes go to Postgres and invalidate the cache.", "recent_prompts": [], "label": "want", "kind": "flow", "expect": "flow", "structure": ["order", "branch"]}
+{"id": "c24", "trigger": "answer", "text": "Done. I renamed the variable.", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c25", "trigger": "answer", "text": "Kubernetes namespaces hold deployments, which create replica sets, which create pods; a service selects pods by label and an ingress routes outside traffic to services.", "recent_prompts": [], "label": "want", "kind": "containment", "expect": "containment", "structure": ["whole_part"]}
+{"id": "c26", "trigger": "answer", "text": "The test failed because the fixture date was in the past.", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c27", "trigger": "prompt", "text": "Where are we with this session?", "recent_prompts": [], "label": "want", "kind": "status", "expect": "status", "structure": ["groups"]}
+{"id": "c28", "trigger": "prompt", "text": "What is a VPC?", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c29", "trigger": "prompt", "text": "Can you summarize what we decided and what is still open?", "recent_prompts": [], "label": "want", "kind": "status", "expect": "status", "structure": ["groups"]}
+{"id": "c30", "trigger": "prompt", "text": "Run the tests again", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c31", "trigger": "answer", "text": "注文は「受付」から始まり、支払いが済むと「準備中」、発送すると「配送中」、届くと「完了」になります。支払い前ならキャンセルでき、「キャンセル済み」に移ります。配送中に住所不明で戻ると「保留」になり、住所が直れば「配送中」に戻ります。", "recent_prompts": [], "label": "want", "kind": null, "expect": "state_machine", "structure": ["transition"]}
+{"id": "c32", "trigger": "answer", "text": "PR は「下書き」で作り、レビューを頼むと「レビュー待ち」になります。指摘があると「修正中」に戻り、承認されると「マージ可」、マージすると「完了」です。", "recent_prompts": [], "label": "want", "kind": null, "expect": "state_machine", "structure": ["transition"]}
+{"id": "c33", "trigger": "answer", "text": "Lambda の実行環境は、最初の呼び出しで「作成」され、初期化が終わると「待機」に入ります。呼ばれるたびに「実行中」になり、終われば「待機」に戻ります。しばらく呼ばれないと「破棄」されます。", "recent_prompts": [], "label": "want", "kind": null, "expect": "state_machine", "structure": ["transition", "cycle"]}
+{"id": "c34", "trigger": "answer", "text": "この障害の流れを時刻順にまとめます。10:02 にデプロイ、10:05 にエラー率が上がり始め、10:09 にアラームが鳴りました。10:15 に原因の設定を特定し、10:21 にロールバック、10:30 にエラー率が平常に戻りました。", "recent_prompts": [], "label": "want", "kind": null, "expect": "timeline", "structure": ["time", "order"]}
+{"id": "c35", "trigger": "answer", "text": "移行は3か月で進めます。1か月目は今の DB の調査と移行先の設計、2か月目は二重書き込みと検証、3か月目に読み取りを切り替え、最後の週に旧 DB を止めます。", "recent_prompts": [], "label": "want", "kind": null, "expect": "timeline", "structure": ["time", "order"]}
+{"id": "c36", "trigger": "answer", "text": "このライブラリの歴史を整理すると、2019 年に初版、2021 年に型定義を同梱、2023 年に ESM のみへ移行、2025 年に旧 API を削除、という流れです。", "recent_prompts": [], "label": "want", "kind": null, "expect": "timeline", "structure": ["time"]}
+{"id": "c37", "trigger": "answer", "text": "今のタスクの状況です。済んだもの：ログインの修正、README の更新。作業中：決済の API 連携。まだ手を付けていないもの：管理画面の権限、メール通知、負荷試験。", "recent_prompts": [], "label": "want", "kind": null, "expect": "kanban", "structure": ["groups"]}
+{"id": "c38", "trigger": "answer", "text": "バックログを並べ直しました。今週やる：検索の高速化、エラー表示の改善。次にやる：多言語対応、CSV 出力。保留：ダークモード（デザイン待ち）。", "recent_prompts": [], "label": "want", "kind": null, "expect": "kanban", "structure": ["groups"]}
+{"id": "c39", "trigger": "answer", "text": "ページが遅い原因を分けると、大きく4つあります。画像：圧縮していない、遅延読み込みなし。スクリプト：使っていない依存が大きい。サーバー：DB の索引がない。ネットワーク：CDN を通していない。", "recent_prompts": [], "label": "want", "kind": null, "expect": "fishbone", "structure": ["cause", "groups"]}
+{"id": "c40", "trigger": "answer", "text": "デプロイが失敗する原因は、権限（ロールに S3 の書き込みがない）、設定（環境変数の名前違い）、コード（ビルドで型エラー）、手順（タグを付け忘れる）の4系統に分かれます。", "recent_prompts": [], "label": "want", "kind": null, "expect": "fishbone", "structure": ["cause", "groups"]}
+{"id": "c41", "trigger": "answer", "text": "テストが不安定な理由を整理すると、時間に依存するもの（日付の固定なし）、順番に依存するもの（前のテストの状態が残る）、外部に依存するもの（本物の API を呼ぶ）の3つです。", "recent_prompts": [], "label": "want", "kind": null, "expect": "fishbone", "structure": ["cause", "groups"]}
+{"id": "c42", "trigger": "answer", "text": "サーバーレスにする利点は、使った分だけ払うこと、運用が軽いこと、自動で伸び縮みすること。欠点は、初回の起動が遅いこと、実行時間に上限があること、手元で再現しにくいことです。", "recent_prompts": [], "label": "want", "kind": null, "expect": "procon", "structure": ["compare"]}
+{"id": "c43", "trigger": "answer", "text": "モノレポの良い点は、変更を1回でそろえられること、共通部品を使い回しやすいこと。悪い点は、CI が重くなること、権限を分けにくいことです。", "recent_prompts": [], "label": "want", "kind": null, "expect": "procon", "structure": ["compare"]}
+{"id": "c44", "trigger": "answer", "text": "TypeScript に移すと、型で間違いに早く気づけて、補完も効きます。一方で、ビルドの手順が増え、最初の移行に手間がかかります。", "recent_prompts": [], "label": "want", "kind": null, "expect": "procon", "structure": ["compare"]}
+{"id": "c45", "trigger": "answer", "text": "この開発の進め方は、計画→実装→レビュー→リリース→振り返りを2週間で1周し、振り返りの結果を次の計画に入れて回します。", "recent_prompts": [], "label": "want", "kind": null, "expect": "cycle", "structure": ["cycle", "order"]}
+{"id": "c46", "trigger": "answer", "text": "学習ループは、失敗を集める→理由ごとに並べる→事例にする→ルールを直す→事例集で前後を比べる、を繰り返します。比べた結果はまた次の集める段階に戻ります。", "recent_prompts": [], "label": "want", "kind": null, "expect": "cycle", "structure": ["cycle", "order"]}
+{"id": "c47", "trigger": "answer", "text": "PDCA で言うと、計画（目標を決める）、実行（試す）、評価（数字を見る）、改善（やり方を変える）を回し続けます。", "recent_prompts": [], "label": "want", "kind": null, "expect": "cycle", "structure": ["cycle"]}
+{"id": "c48", "trigger": "answer", "text": "確認した結果です。設定ファイル 29 件を確認し、秘密情報は 0 件でした。依存の脆弱性は 2 件あり、どちらも更新が必要です。ログの出力は未確認です。", "recent_prompts": [], "label": "want", "kind": null, "expect": "checklist", "structure": ["groups"]}
+{"id": "c49", "trigger": "answer", "text": "リリース前のチェックを済ませました。テストは全部通過、型チェックも通過、README は更新済み。変更履歴はまだ書いていません。ステージングでの動作確認も未実施です。", "recent_prompts": [], "label": "want", "kind": null, "expect": "checklist", "structure": ["groups"]}
+{"id": "c50", "trigger": "answer", "text": "調べた範囲では、API キーのログへの流出はありませんでした。ただし、エラー時にリクエストの中身を書くライブラリが1つあり、ここは要対応です。CI のログは見ていないので未確認です。", "recent_prompts": [], "label": "want", "kind": null, "expect": "checklist", "structure": ["groups"]}
+{"id": "c51", "trigger": "answer", "text": "売上が落ちた理由を分解すると、客数が減ったのか、単価が下がったのかに分かれます。客数は新規と既存に、単価は値引きと商品の構成に分けられます。", "recent_prompts": [], "label": "want", "kind": null, "expect": "logic_tree", "structure": ["cause", "hierarchy"]}
+{"id": "c52", "trigger": "answer", "text": "解約を減らす打ち手は、使い始めの支援、使い続けたくなる機能、離れそうな人への声かけ、の3つに分けられ、それぞれにさらに具体策があります。", "recent_prompts": [], "label": "want", "kind": null, "expect": "logic_tree", "structure": ["hierarchy", "groups"]}
+{"id": "c53", "trigger": "answer", "text": "クラウドの費用は、計算（EC2・Lambda）、保存（S3・EBS）、通信（転送量・NAT）に分かれ、さらに計算は常時動くものと一時的なものに分けられます。", "recent_prompts": [], "label": "want", "kind": null, "expect": "logic_tree", "structure": ["hierarchy", "whole_part"]}
+{"id": "c54", "trigger": "answer", "text": "プロンプトのミスではありません。依頼ははっきりしていて、取り違えたのは私です。私がしたことは3つです。説明のページを判断のフォームに組み替えた、同じ問いをポップアップで重ねた、「そうじゃない」のあとも確かめずに作り直しまで進めた。作り直した版は導入済みですが、commit していないので戻せます。学習を記録して commit 済みです。クラウド環境の設定欄に貼り直しが要ります。", "recent_prompts": [], "label": "want", "kind": null, "expect": "checklist", "structure": ["groups"]}
+{"id": "c55", "trigger": "answer", "text": "手順1は合格です。手順3以降に進めないのは、押すと図が出るという説明を消したからです。手順2で［図にする］を押すと図が出て、その下に［大きく開く］と入力欄が出ます。手順3〜5はその下のボタンで進めます。図の種類の候補が13種類並んで読みにくい件は、今回の範囲外なので別のイシューにします。", "recent_prompts": [], "label": "want", "kind": null, "expect": "checklist", "structure": ["groups", "order"]}
+{"id": "c56", "trigger": "answer", "text": "Jev が答え終わるたびに「図にするか」を判定し、しきい値以上ならペインに提案を出します。［図にする］を押すと、会話の複製の Claude が D2 を書き、D2 が SVG にしてペインに出します。", "recent_prompts": [], "label": "want", "kind": "flow", "expect": "flow", "structure": ["order"]}
+{"id": "c57", "trigger": "answer", "text": "アカウントの中に VPC があり、その中にパブリックとプライベートのサブネットがあります。ALB はパブリックに、ECS と RDS はプライベートに置きます。", "recent_prompts": [], "label": "want", "kind": "containment", "expect": "containment", "structure": ["whole_part"]}
+{"id": "c58", "trigger": "answer", "text": "モデルの役割を3層で分けると、一番下が保存（DynamoDB）、その上が処理（Lambda）、一番上が窓口（API Gateway）です。", "recent_prompts": [], "label": "want", "kind": "layers", "expect": "layers", "structure": ["hierarchy"]}
+{"id": "c59", "trigger": "answer", "text": "わかりました。その方向で進めます。", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c60", "trigger": "answer", "text": "そのファイルは削除しておきました。", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c61", "trigger": "answer", "text": "Lambda の上限は 15 分です。", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}
+{"id": "c62", "trigger": "answer", "text": "原因はタイポでした。直したので、もう一度試してください。", "recent_prompts": [], "label": "no", "kind": null, "expect": null, "structure": []}

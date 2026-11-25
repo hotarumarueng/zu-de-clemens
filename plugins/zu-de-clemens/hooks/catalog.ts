@@ -1,13 +1,16 @@
 export type DiagramKind =
   | 'decision' | 'comparison' | 'matrix' | 'layers' | 'containment' | 'hub' | 'flow'
   | 'swimlane' | 'sequence' | 'tree' | 'relations' | 'steps' | 'er' | 'status'
+  | 'state_machine' | 'fishbone' | 'cycle' | 'logic_tree' | 'timeline' | 'kanban' | 'procon' | 'checklist'
 
 export type KindInfo = {
   id: DiagramKind
   name: { ja: string; en: string }
   when: { ja: string; en: string }
-  /** fork に渡す D2 の型の見本。色や装飾は付けない（テーマに任せる） */
+  /** fork に渡す型の見本。d2 は D2、md は見出しと箇条書き。色や装飾は付けない（テーマに任せる） */
   sample: string
+  /** md: 図にせず、fork が書いた見出しと箇条書きを MOD がペインの部品で組む（列・行に並べる種類）。省略は d2 */
+  form?: 'd2' | 'md'
 }
 
 export const KINDS: readonly KindInfo[] = [
@@ -195,6 +198,111 @@ topic_b: Topic B {
   grid-columns: 1
   decided: "Decided: Z"
 }`,
+  },
+  // 2026-11-24 に足した種類。矢印でつながるものは D2、列や行に並べるものは md（ペインの部品で組む）
+  {
+    id: 'state_machine',
+    name: { ja: '状態遷移', en: 'State machine' },
+    when: { ja: '名前の付いた状態のあいだを、きっかけで移り変わる', en: 'Something moves between named states on events' },
+    sample: `direction: down
+draft: Draft
+review: In review
+done: Done
+draft -> review: request review
+review -> draft: changes requested
+review -> done: approved`,
+  },
+  {
+    id: 'fishbone',
+    name: { ja: '特性要因', en: 'Fishbone' },
+    when: { ja: '1つの結果に対する原因を、系統ごとに分ける', en: 'Causes of one result, grouped by kind' },
+    // 原因の系統を 1 つの枠に縦に積み、枠から結果へ 1 本だけ矢印を出す。系統ごとに矢印を出すと横一列に並び、幅 1556px になった（2026-11-24）
+    sample: `direction: down
+causes: Causes {
+  grid-columns: 1
+  people: People {
+    grid-columns: 1
+    a1: Cause 1
+    a2: Cause 2
+  }
+  tools: Tools {
+    grid-columns: 1
+    b1: Cause 3
+  }
+}
+result: "Result: the page is slow"
+causes -> result`,
+  },
+  {
+    id: 'cycle',
+    name: { ja: '循環', en: 'Cycle' },
+    when: { ja: '繰り返して最初に戻る流れ', en: 'A process that repeats and returns to its start' },
+    sample: `direction: down
+plan: 1. Plan
+do: 2. Do
+check: 3. Check
+act: 4. Act
+plan -> do -> check -> act
+act -> plan: repeat`,
+  },
+  {
+    id: 'logic_tree',
+    name: { ja: 'ロジックツリー', en: 'Logic tree' },
+    when: { ja: '結果や目的を、原因や手段に分解していく', en: 'Break a result or goal down into causes or means' },
+    sample: `direction: down
+goal: Sales fell
+a: Fewer customers
+b: Lower spend each
+a1: Fewer new customers
+a2: Fewer returning
+goal -> a
+goal -> b
+a -> a1
+a -> a2`,
+  },
+  {
+    id: 'timeline',
+    name: { ja: 'タイムライン', en: 'Timeline' },
+    when: { ja: '日時と出来事を、時刻の順に並べる', en: 'Events tied to dates or times, in time order' },
+    form: 'md',
+    sample: `- 10:02 | Deployed
+- 10:05 | Error rate rose
+- 10:21 | Rolled back
+- 10:30 | Back to normal`,
+  },
+  {
+    id: 'kanban',
+    name: { ja: 'カンバン', en: 'Kanban' },
+    when: { ja: '作業を、未着手・進行中・済みなどの段階の列に分ける', en: 'Tasks sorted into stages such as to do, in progress and done' },
+    form: 'md',
+    sample: `## Not started
+- Admin permissions
+## In progress
+- Payment API
+## Done
+- Login fix`,
+  },
+  {
+    id: 'procon',
+    name: { ja: '長所と短所', en: 'Pros and cons' },
+    when: { ja: '1つの案の良い点と悪い点を並べる', en: 'Advantages and disadvantages of one option' },
+    form: 'md',
+    sample: `## Pros
+- Pay only for use
+- Scales by itself
+## Cons
+- Slow first start
+- Hard to run locally`,
+  },
+  {
+    id: 'checklist',
+    name: { ja: 'チェックリスト', en: 'Checklist' },
+    when: { ja: '確かめた項目と、その状態（済み・要対応・未確認）', en: 'Items checked, each with a state: done, needs action, unchecked' },
+    form: 'md',
+    sample: `## Security check
+- ✓ 29 settings files, no secrets
+- ! 2 dependencies need updates
+- ? Logs not checked`,
   },
 ]
 

@@ -11,7 +11,11 @@ export type View = {
   text?: string
   probability?: number
   candidates?: { id: string; p: number }[]
-  figure?: { kind: string; title: string; recommend?: string; svg: string; ascii: string; d2?: string; markdown?: string }
+  figure?: { kind: string; title: string; recommend?: string; replies?: { section: string; question: string }[]; svg: string; ascii: string; d2?: string; markdown?: string }
+  /** 図の問い（figure.replies）への返答。同じ並びで持ち、新しい図で空にする */
+  answers?: string[]
+  /** 返答をまとめたあとに出す 1 行の文言のキー */
+  replyNote?: string
   /** しきい値未満で提案を出さなかった直近のきっかけ。手動の［図にして］で描く */
   latest?: Pick<View, 'trigger' | 'lang' | 'text' | 'probability' | 'candidates' | 'question'>
   /** 案内・失敗のときに出す文言のキー */
