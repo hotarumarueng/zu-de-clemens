@@ -14,7 +14,11 @@
 
 https://github.com/user-attachments/assets/f4f7ee15-faf1-41ae-b48c-2c40b8a28e64
 
-![会話の横のペインに、動画サイトのサーバーレス構成を流れの図で出したところ](docs/images/screenshot.webp)
+![会話の横のペインに、動画の投稿から再生までの流れを D2 の図で出したところ](docs/images/flow-diagram.webp)
+
+![会話の横のペインに、アップロードの経路を比べた表を、行ごとの枠で出したところ](docs/images/compare-table.webp)
+
+<sub>どちらも画面のイメージ。図はプラグインと同じ配色と引数で d2 に描かせたもの、ペインのほかの部分は組み方（`pane.tsx`）どおりに HTML で描き直したもので、実機の撮影ではない。</sub>
 
 ## ✨ できること
 
@@ -88,7 +92,9 @@ https://github.com/user-attachments/assets/f4f7ee15-faf1-41ae-b48c-2c40b8a28e64
 - ［大きく開く］：図を埋め込んだページを既定のブラウザで開く。拡大・縮小・移動はそちらで。D2 の図のときだけで、macOS と Linux だけ
 - 描き直しの入力欄と［描き直す］：「AとBは同時に起きる」のように直してほしいことを書くと、指示と前の図を添えて描き直す
 
-![「今何してたっけ」と聞くと、話題・決まったこと・残っていることを整理した図が出る](docs/images/session-summary.webp)
+![図の中の問いに返答を書いて［返答を入力欄に入れる］を押すと、会話の入力欄に「問い → 返答」が入る](docs/images/reply-box.webp)
+
+<sub>画面のイメージ（HTML で描き直したもの）。</sub>
 
 ## ⚙️ 設定
 

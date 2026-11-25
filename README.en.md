@@ -14,7 +14,11 @@ A Claude Code plugin (function-hooks MOD) that **suggests a diagram** when one w
 
 https://github.com/user-attachments/assets/f4f7ee15-faf1-41ae-b48c-2c40b8a28e64
 
-![The pane beside the conversation, showing a flow diagram of a serverless video site](docs/images/screenshot.webp)
+![The pane beside the conversation, showing a D2 flow diagram from uploading a video to playing it](docs/images/flow-diagram.webp)
+
+![The pane beside the conversation, comparing two upload paths in a table with one frame per row](docs/images/compare-table.webp)
+
+<sub>Both are illustrations of the screen, not captures from the app. The diagram was rendered by d2 with the plugin's own theme and flags; the rest of the pane was redrawn in HTML following the layout in `pane.tsx`. The sample conversation is in Japanese.</sub>
 
 ## ✨ What it does
 
@@ -88,7 +92,9 @@ When no proposal was shown, [Draw this] in the open pane still draws the latest 
 - [Open larger]: opens a page with the diagram in your default browser to zoom and pan there. D2 diagrams only, on macOS and Linux
 - A redraw field and [Redraw]: write what to change ("A and B happen at once") and the diagram is redrawn with your instruction and the previous diagram
 
-![Asking "what was I doing?" draws the session's progress: topics, decisions and what is still open](docs/images/session-summary.webp)
+![Replies written under the questions in the diagram go into the prompt box as "question → answer" lines after pressing [Put answers in the prompt box]](docs/images/reply-box.webp)
+
+<sub>An illustration of the screen, redrawn in HTML.</sub>
 
 ## ⚙️ Settings
 
