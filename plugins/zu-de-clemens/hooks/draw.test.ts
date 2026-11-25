@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { downward, draw, isSafeD2, parseReply, themed } from './draw'
+import { downward, draw, gridOnlyWithoutEdges, isSafeD2, parseReply, themed } from './draw'
 import type { DrawIO } from './draw'
 
 const GOOD = '```d2\na -> b\n```\nKIND: flow\nTITLE: 流れ\nRECOMMEND: 2. B案：速い'
@@ -214,7 +214,7 @@ test('矢印のある図からは grid-columns を外し、矢印のない整理
 test('fork への指示で、grid-columns は矢印のない図に限る（#4）', async () => {
   const { io, prompts } = fakeIO([{ text: GOOD }])
   await draw(io, input)
-  expect(prompts[0]!.includes('Never use grid-columns in a diagram with arrows')).toBe(true)
+  expect(prompts[0]!.includes('Never put grid-columns on a container whose members have arrows to or from them')).toBe(true)
 })
 
 // 一覧・表（Markdown）: 流れのない返答は図にせず、ペインの Markdown で出す（2026-11-24 の試作）
@@ -254,4 +254,73 @@ test('依頼文に一覧・表の選択肢があり、「比較表か格子に�
   await draw(io, input)
   expect(prompts[0]!.includes('```md')).toBe(true)
   expect(prompts[0]!.includes('use a comparison or matrix layout instead')).toBe(false)
+})
+
+// 状態の印は描く前に見た目へ変える（2026-11-24）
+test('D2 の箱の印は状態の class に変わり、印の文字は残らない', async () => {
+  const marked = '```d2\na: "! 権限が足りない"\nb: ✓ 通過\na -> b\n```\nKIND: flow\nTITLE: t'
+  const { io, runs } = fakeIO([{ text: marked }])
+  const result = await draw(io, { ...input, trigger: 'answer' })
+  expect(result.ok && result.figure.d2.includes('a.class: st-warn')).toBe(true)
+  expect(result.ok && /:\s*"?!\s/.test(result.figure.d2)).toBe(false)
+  expect(renders(runs).every(r => r.stdin?.includes('st-ok'))).toBe(true)
+})
+
+test('矢印の文字は斜体にしない（実機で読みにくかった）', async () => {
+  const { io, runs } = fakeIO([{ text: GOOD }])
+  await draw(io, input)
+  expect(renders(runs).every(r => r.stdin?.includes('(** -> **)[*].style.italic: false'))).toBe(true)
+})
+
+test('新しい md の種類（タイムライン・カンバン・長所と短所・チェックリスト）を受け付ける', async () => {
+  for (const kind of ['timeline', 'kanban', 'procon', 'checklist']) {
+    const result = await draw(fakeIO([{ text: `\`\`\`md\n- a\n\`\`\`\nKIND: ${kind}\nTITLE: t` }]).io, { ...input, trigger: 'answer' })
+    expect(result.ok && result.figure.kind).toBe(kind)
+  }
+})
+
+test('md の種類の候補には、md の見本を付けて渡す', async () => {
+  const { io, prompts } = fakeIO([{ text: GOOD }])
+  await draw(io, { ...input, trigger: 'answer', candidates: [{ id: 'timeline' as never, p: 0.9 }] })
+  expect(prompts[0]!.includes('reply with a ```md block')).toBe(true)
+})
+
+// 格子を外すのは、中身に矢印がつながる枠だけ。枠そのものから出る矢印は重ならない（2026-11-24、特性要因の縦積み）
+test('中身に矢印がつながらない枠の格子は残し、つながる枠の格子は外す', async () => {
+  const fish = 'causes: 原因 {\n  grid-columns: 1\n  img: 画像 {\n    grid-columns: 1\n    a: 圧縮なし\n  }\n}\nresult: 結果\ncauses -> result'
+  expect(gridOnlyWithoutEdges(fish)).toBe(fish)
+  const nested = 'mac: Mac {\n  grid-columns: 1\n  a: A\n}\nsrv: S {\n  grid-columns: 1\n  p: P\n}\nmac.a -> srv.p'
+  expect(/grid-columns/.test(gridOnlyWithoutEdges(nested))).toBe(false)
+  const top = 'grid-columns: 1\na: A\nb: B\na -> b'
+  expect(/grid-columns/.test(gridOnlyWithoutEdges(top))).toBe(false)
+  const inner = 'x: X {\n  grid-columns: 1\n  a -> b\n}'
+  expect(/grid-columns/.test(gridOnlyWithoutEdges(inner))).toBe(false)
+})
+
+// 図の中の問いに、その場で返答を書けるようにする（2026-11-25）
+test('parseReply は REPLY 行を見出しと問いに分け、崩れた行と 6 行目以降を捨てる', async () => {
+  const text = '```md\n## 案A\n- x\n```\nKIND: list\nTITLE: t\nREPLY: 案A | どちらで進めますか？（案A／案C）\nREPLY: 期限はいつにしますか？\nREPLY:   \nREPLY: | \n' + 'REPLY: q\n'.repeat(5)
+  const parsed = parseReply(text)!
+  expect(parsed.replies?.[0]).toEqual({ section: '案A', question: 'どちらで進めますか？（案A／案C）' })
+  expect(parsed.replies?.[1]).toEqual({ section: '', question: '期限はいつにしますか？' })
+  expect(parsed.replies?.length).toBe(5)
+})
+
+test('応答のときは問いの書き出し方を指示し、質問のときは指示しない', async () => {
+  const a = fakeIO([{ text: GOOD }])
+  await draw(a.io, { ...input, trigger: 'answer' })
+  expect(a.prompts[0]!.includes('REPLY:')).toBe(true)
+  expect(a.prompts[0]!.includes('Do not invent questions')).toBe(true)
+  const q = fakeIO([{ text: GOOD }])
+  await draw(q.io, { ...input, trigger: 'question' })
+  expect(q.prompts[0]!.includes('REPLY:')).toBe(false)
+})
+
+test('質問から描いた図では、fork が REPLY を書いても返答欄を出さない', async () => {
+  const { io } = fakeIO([{ text: GOOD + '\nREPLY: | どれにしますか？' }])
+  const r = await draw(io, { ...input, trigger: 'question' })
+  expect(r.ok && r.figure.replies).toBe(undefined)
+  const a = fakeIO([{ text: GOOD + '\nREPLY: | どれにしますか？' }])
+  const r2 = await draw(a.io, { ...input, trigger: 'answer' })
+  expect(r2.ok && r2.figure.replies).toEqual([{ section: '', question: 'どれにしますか？' }])
 })

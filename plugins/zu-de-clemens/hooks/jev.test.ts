@@ -37,11 +37,14 @@ test('質問のときは needs_diagram と diagram_kind を jev-latest に聞く
   expect(sent[0]!.url).toBe('https://api.typesafe.ai/v1/systemone')
   expect(sent[0]!.headers.Authorization).toBe(`Bearer ${KEY}`)
   expect(sent[0]!.body.model).toBe('jev-latest')
-  expect(Object.keys(sent[0]!.body.questions).sort()).toEqual(['diagram_kind', 'needs_diagram'])
+  const keys = Object.keys(sent[0]!.body.questions)
+  expect(keys.includes('needs_diagram') && keys.includes('diagram_kind')).toBe(true)
+  // 構造の質問は選択式より当たらなかったので聞かない（2026-11-24 の評価）。問いは 2 つだけ
+  expect(keys.length).toBe(2)
   expect(sent[0]!.body.questions.needs_diagram.type).toBe('noul')
   expect(sent[0]!.body.questions.diagram_kind.type).toBe('choice')
-  // 14 種から整理専用の status を除いた 13 種と none
-  expect(Object.keys(sent[0]!.body.questions.diagram_kind.criteria).length).toBe(14)
+  // 22 種から整理専用の status を除いた 21 種と none
+  expect(Object.keys(sent[0]!.body.questions.diagram_kind.criteria).length).toBe(22)
   expect('none' in sent[0]!.body.questions.diagram_kind.criteria).toBe(true)
   expect('status' in sent[0]!.body.questions.diagram_kind.criteria).toBe(false)
   expect(sent[0]!.body.state.target).toEqual({ kind: 'question', text: 'A案とB案のどちら？' })
@@ -127,4 +130,10 @@ test('どの失敗でも、結果とログにキーの値が出ない', async ()
     expect(JSON.stringify(r).includes(KEY)).toBe(false)
     expect(logs.some(line => line.includes(KEY))).toBe(false)
   }
+})
+
+test('「図にするか」の説明は、状態の並び・時間の流れも図に向くものとして挙げる', async () => {
+  const { io, sent } = fakeIO(ok({ needs_diagram: { type: 'noul', noul: 0.5 }, diagram_kind: { type: 'choice', probabilities: { flow: 1 } } }))
+  await judge(io, input({ trigger: 'answer', text: 'x' }))
+  expect(/state|progress/.test(sent[0]!.body.questions.needs_diagram.criteria.true)).toBe(true)
 })

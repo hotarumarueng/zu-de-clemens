@@ -13,7 +13,12 @@ export type JevIO = {
 }
 
 export type Judgement =
-  | { ok: true; needsDiagram?: number; kinds?: { id: DiagramKind; p: number }[]; sessionSummary?: number }
+  | {
+      ok: true
+      needsDiagram?: number
+      kinds?: { id: DiagramKind; p: number }[]
+      sessionSummary?: number
+    }
   | { ok: false; reason: 'unauthorized' | 'unavailable' | 'malformed' }
 
 const ENDPOINT = 'https://api.typesafe.ai/v1/systemone'
@@ -27,7 +32,7 @@ const NEEDS_DIAGRAM = {
   type: 'noul',
   instructions: 'Would a diagram help the user understand `target.text` better than text alone?',
   criteria: {
-    true: 'It describes relationships between parts, the scope of an effect, a flow, a comparison of options, or things nested inside other things.',
+    true: 'It describes relationships between parts, the scope of an effect, a flow, a comparison of options, things nested inside other things, events over time, or several items each with a state or a stage of progress.',
     false: 'It is a simple fact, a yes/no answer, a short definition, or small talk.',
   },
 }
@@ -86,6 +91,7 @@ function parse(trigger: TriggerKind, text: string): Judgement {
   if (!isProbability(p) || !probabilities || typeof probabilities !== 'object') return { ok: false, reason: 'malformed' }
   const entries = Object.entries(probabilities)
   if (!entries.every(([, value]) => isProbability(value))) return { ok: false, reason: 'malformed' }
+  // 構造のはい・いいえ 18 問と真理値表も試したが、選択式より当たらず、問い合わせも重くなったので戻した（evals/results-structure-2026-11-24.md）
   const kinds = entries
     .filter(([id]) => PICKABLE.some(kind => kind.id === id))
     .map(([id, value]) => ({ id: id as DiagramKind, p: value as number }))

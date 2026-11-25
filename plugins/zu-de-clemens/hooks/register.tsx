@@ -7,12 +7,12 @@ import type { DiagramKind } from './catalog'
 import { checkFigure } from './check'
 import { draw } from './draw'
 import type { DrawIO } from './draw'
-import { parseCases, report, runEval } from './eval'
+import { judgementLines, parseCases, report, runEval } from './eval'
 import { judge } from './jev'
 import type { JevIO, TriggerKind } from './jev'
 import { appendLog } from './log'
 import type { LogEntry, LogIO } from './log'
-import { renderPane } from './pane'
+import { renderPane, replyText } from './pane'
 import { detectLang, t } from './strings'
 import type { StringKey } from './strings'
 import { viewerHtml } from './viewer'
@@ -125,7 +125,7 @@ async function startDraw($: EngineInterface, options: Options, seq: number, how:
   if (now.state !== 'drawing' || now.drawId !== seq) return
   if (result.ok) {
     // D2 は描き直しのときに fork へ前の図として渡すため残す
-    await update($, view, (v): View => ({ ...v, state: 'figure', figure: result.figure }))
+    await update($, view, (v): View => ({ ...v, state: 'figure', figure: result.figure, answers: [], replyNote: undefined }))
     await log($, await read($, view), how.reaction ?? (options.auto ? 'auto' : 'accepted'), how.instruction)
     return
   }
@@ -240,6 +240,7 @@ async function evaluate($: EngineInterface, options: Options): Promise<{ text: s
   const outcomes = await runEval(jevIO($), options.key, parsed.cases as never)
   const { markdown, threshold } = report(outcomes, { at: new Date(await $.clock.now()).toISOString(), model: 'jev-latest' })
   await $.fs.write(`${dir}/results.md`, markdown)
+  await $.fs.write(`${dir}/judgements.jsonl`, judgementLines(outcomes))
   const failed = outcomes.filter(o => o.p === undefined).length
   return { text: `${dir}/results.md に書きました。既定のしきい値の候補：${threshold ?? 'なし'}${failed ? `（Jev が答えなかった件：${failed}）` : ''}` }
 }
@@ -323,6 +324,25 @@ export const register: Register = (on, rawOptions) => {
       manual: () => drawManually($, options),
       open: () => openFigure($),
       redraw: instruction => redraw($, options, instruction),
+      answer: async (i, text) => {
+        await update($, view, (v): View => {
+          if (v.seq !== current.seq) return v
+          const answers = [...(v.answers ?? [])]
+          answers[i] = text
+          return { ...v, answers, replyNote: undefined }
+        })
+      },
+      fillReplies: async () => {
+        const v = await read($, view)
+        // 入力欄のない画面（-p・SDK）では入れられない。失敗はコピーを促す 1 行にする
+        const filled = await $.prompt.fill({ text: replyText(v.figure?.replies ?? [], v.answers ?? []), mode: 'append' }).catch(() => ({ isFilled: false }))
+        await update($, view, (w): View => ({ ...w, replyNote: filled.isFilled ? 'replyFilled' : 'replyFillFailed' }))
+      },
+      copyReplies: async surface => {
+        const v = await read($, view)
+        const copied = await $.ui.copy({ text: replyText(v.figure?.replies ?? [], v.answers ?? []), ...(surface ? { surface: surface as never } : {}) }).catch(() => ({ isCopied: false }))
+        await update($, view, (w): View => ({ ...w, replyNote: copied.isCopied ? 'replyCopied' : 'replyCopyFailed' }))
+      },
     })
   })
 }

@@ -5,6 +5,8 @@ import { KINDS } from '../plugins/zu-de-clemens/hooks/catalog.ts'
 
 let failed = 0
 for (const kind of KINDS) {
+  // md の種類は D2 で描かないので対象外
+  if (kind.form === 'md') continue
   const r = spawnSync('d2', ['validate', '-'], { input: kind.sample, encoding: 'utf8' })
   if (r.status !== 0) {
     failed++

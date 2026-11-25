@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { parseCases, report } from './eval'
+import { judgementLines, parseCases, report } from './eval'
 import type { Outcome } from './eval'
 
 const line = (over: object = {}) => JSON.stringify({ id: 'c01', trigger: 'question', text: 't', recent_prompts: [], label: 'want', kind: 'flow', ...over })
@@ -43,4 +43,24 @@ test('外れが減らないなら、しきい値を上げて見逃しを増や�
   // want の最低が 0.63、no の最高が 0.55。0.60 なら外れ 0、0.65 以上は見逃し 1（10%）
   const outcomes = [o('w1', 'want', 0.63), ...Array.from({ length: 9 }, (_, i) => o(`w${i + 2}`, 'want', 0.95)), o('n1', 'no', 0.55)]
   expect(report(outcomes, { at: 'x', model: 'm' }).threshold).toBe(0.6)
+})
+
+// 期待の種類（expect）での当たり具合と応答時間を出す（2026-11-24）
+test('parseCases は expect に新しい種類を受け付け、知らない種類は拒む', async () => {
+  expect(parseCases(line({ kind: null, expect: 'timeline', structure: ['time'] })).ok).toBe(true)
+  expect(parseCases(line({ kind: null, expect: 'pie' })).ok).toBe(false)
+})
+
+test('report は期待の種類が 1 位・上位 3 に入った数と応答時間を出す', async () => {
+  const w = (id: string, expect: string, kinds: string[], ms: number) =>
+    ({ ...o(id, 'want', 0.9, kinds, null), expect, ms }) as Outcome
+  const r = report([w('a', 'timeline', ['timeline', 'steps'], 1200), w('b', 'cycle', ['steps', 'flow', 'cycle'], 3400)], { at: 'x', model: 'm' })
+  expect(r.markdown.includes('期待の種類が 1 位：50%（1/2）')).toBe(true)
+  expect(r.markdown.includes('期待の種類が上位 3：100%（2/2）')).toBe(true)
+  expect(r.markdown.includes('応答時間：中央 3.4 秒・最長 3.4 秒')).toBe(true)
+})
+
+test('judgementLines は 1 件 1 行の JSON で、種類の順位と応答時間を含む', async () => {
+  const lines = judgementLines([{ ...o('a', 'want', 0.9, ['timeline'], null), expect: 'timeline', ms: 800 } as Outcome])
+  expect(JSON.parse(lines.trim())).toEqual({ id: 'a', label: 'want', expect: 'timeline', p: 0.9, kinds: ['timeline'], ms: 800 })
 })

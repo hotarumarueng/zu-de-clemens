@@ -20,7 +20,8 @@ https://github.com/user-attachments/assets/c7a1639e-9c8f-4509-b4fa-8d132eebe753
 
 - 🙋 **Proposes before drawing.** A cheap classifier ([Jev](https://docs.typesafe.ai/introduction) by TypeSafe) scores each moment. At or above the threshold, the pane shows a proposal with [Draw it] / [Not now]. Nothing is drawn until you press the button.
 - 🔔 **Three moments.** When Claude asks you a question (AskUserQuestion), when Claude finishes an answer, and when you ask for an overview of the session ("where are we now?").
-- 🧩 **Claude picks the diagram.** Jev ranks 14 diagram kinds (comparison, flow, layers, containment, sequence, status, ...). A fork of the current conversation writes the D2, which is validated (`d2 validate`) and rendered to SVG. For questions, the pane also shows which option Claude recommends and why.
+- 🧩 **Claude picks the diagram.** Jev ranks 21 diagram kinds (comparison, flow, layers, containment, sequence, state machine, timeline, kanban, ...). A fork of the current conversation writes the D2, which is validated (`d2 validate`) and rendered to SVG. Kinds that line things up (lists, tables, timelines, kanban) are built in the pane as framed cards. For questions, the pane also shows which option Claude recommends and why.
+- ✍️ **Answer questions inside the diagram.** When an answer asks you something ("plan A or plan B?"), a reply box appears under that question. [Put answers in the prompt box] adds your replies to the prompt box as "question → answer" lines. Nothing is sent until you press Enter.
 - 📌 **Stays until the next proposal.** A drawn diagram stays in the pane while you keep talking, until a new proposal replaces it.
 - 🌗 **Light or dark.** Diagram colors follow the app's appearance, picked for at least 4.5:1 contrast on text and 3:1 on lines.
 
