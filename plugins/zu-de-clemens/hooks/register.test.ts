@@ -637,12 +637,14 @@ test('見出しに属さない問いは「返答が要る問い」のカード�
   expect((await ui.find({ key: 'replies' }))?.text).toMatch(/返答を入力欄に入れる/)
 })
 
-test('表はセルごとに枠を付け、見出しの行の枠を色で分ける', { options: OPTIONS }, async ($, on) => {
+// セルごとに枠を付けると、横と縦のどちらに読むのか分からなかった（2026-11-26 本人）。行を 1 本の枠で囲み、横に読ませる
+test('表は行ごとに 1 本の枠で囲み、セルには枠を付けない。見出しの行の枠は色で分ける', { options: OPTIONS }, async ($, on) => {
   const ui = await drawWith($, on, '```md\n| | 案A | 案C |\n|---|---|---|\n| 形 | 受け箱を1つに | 写しのまま |\n```\nKIND: table\nTITLE: 案の比べ')
-  expect(await framed(ui, 'c0-1')).toBe('round')
-  expect(await framed(ui, 'c1-2')).toBe('round')
-  expect(((await ui.find({ key: 'c0-1' })) as { props: Record<string, unknown> }).props.borderColor).toBe('claude')
-  expect(((await ui.find({ key: 'c1-2' })) as { props: Record<string, unknown> }).props.borderColor).toBe('inactive')
+  expect(await framed(ui, 'r0')).toBe('round')
+  expect(await framed(ui, 'r1')).toBe('round')
+  expect(((await ui.find({ key: 'r0' })) as { props: Record<string, unknown> }).props.borderColor).toBe('claude')
+  expect(((await ui.find({ key: 'r1' })) as { props: Record<string, unknown> }).props.borderColor).toBe('inactive')
+  expect(await framed(ui, 'c1-2')).toBeUndefined()
 })
 
 test('時系列は出来事ごとに枠のカードにし、間を矢印でつなぐ', { options: OPTIONS }, async ($, on) => {

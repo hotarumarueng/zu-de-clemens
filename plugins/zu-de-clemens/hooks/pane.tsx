@@ -186,15 +186,16 @@ export function renderPane($: EngineInterface, e: RenderInput<'Pane'>, view: Vie
       )
     } else if (figure.markdown && figure.kind === 'table') {
       // 表も部品で組む。Markdown のままだとセルの印が文字で出る（2026-11-24 実機）。
-      // セルごとに枠を付けてマス目に見せ、見出しの行は枠の色で分ける
+      // 行を 1 本の枠で囲み、横に読むと分かるようにする。セルごとの枠は、横と縦のどちらに読むのか分からなかった
+      // （2026-11-26 本人）。見出しの行は枠の色で分ける
       const rows = parseTable(figure.markdown)
       const width = `${Math.floor(100 / Math.max(1, ...rows.map(r => r.length)))}%`
       picture = (
         <Box key="figure" flexDirection="column">
           {rows.map((cells, r) => (
-            <Box key={`r${r}`} flexDirection="row" alignItems="stretch">
+            <Box key={`r${r}`} flexDirection="row" alignItems="flex-start" borderStyle="round" borderColor={r === 0 ? 'claude' : 'inactive'} paddingX={1}>
               {cells.map((cell, c) => (
-                <Box key={`c${r}-${c}`} width={width} borderStyle="round" borderColor={r === 0 ? 'claude' : 'inactive'} paddingX={1}>
+                <Box key={`c${r}-${c}`} width={width} paddingRight={1}>
                   {marked(`m${r}-${c}`, splitMark(cell), r === 0 || c === 0 ? 'semibold' : undefined)}
                 </Box>
               ))}
