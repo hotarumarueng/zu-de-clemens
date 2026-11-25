@@ -12,7 +12,7 @@ A Claude Code plugin (function-hooks MOD) that **suggests a diagram** when one w
 
 </div>
 
-https://github.com/user-attachments/assets/c7a1639e-9c8f-4509-b4fa-8d132eebe753
+https://github.com/user-attachments/assets/f4f7ee15-faf1-41ae-b48c-2c40b8a28e64
 
 ![The pane beside the conversation, showing a flow diagram of a serverless video site](docs/images/screenshot.webp)
 
@@ -80,11 +80,12 @@ Just keep working! When a moment scores at or above the threshold, the pane open
 | You ask for an overview ("where are we now?", "what did we decide?") | "This session can be summarized in a diagram" | Topics, what is decided, what is still open |
 
 > [!TIP]
-> The pane buttons work while the question dialog is open, so you can look at the diagram before you answer.
+> The pane buttons work while the question dialog is open, so you can look at the diagram before you answer. Diagrams drawn from a question show no reply boxes: answer in the dialog.
 
 When no proposal was shown, [Draw this] in the open pane still draws the latest moment. Under a drawn diagram you get:
 
-- [Open larger]: writes the diagram to an SVG file and opens it in your OS's default app (usually a browser) to zoom and pan there. macOS and Linux only
+- Reply boxes: when the answer asks you something, a box appears under each question. Write your reply and press [Put answers in the prompt box] to add "question → answer" lines to your prompt box. Nothing is sent until you press Enter. If that fails, [Copy] copies them instead
+- [Open larger]: opens a page with the diagram in your default browser to zoom and pan there. D2 diagrams only, on macOS and Linux
 - A redraw field and [Redraw]: write what to change ("A and B happen at once") and the diagram is redrawn with your instruction and the previous diagram
 
 ![Asking "what was I doing?" draws the session's progress: topics, decisions and what is still open](docs/images/session-summary.webp)
@@ -108,6 +109,8 @@ Change them with `/plugin configure`.
 
 In real use, 0.6 suggested too often (182 suggestions out of 224 judgements from 2026-10-19 to 10-30, of which 51 were accepted). At 0.8, 39 of the 51 accepted suggestions remain and the 130 unaccepted ones drop to 69. When no suggestion appears, you can still draw with the pane's [🎨 Draw this] button (#5).
 
+On 2026-11-24 the eval grew to 62 cases (44 "want", 18 "no"). It suggests 0.45, but the default stays at 0.8: the eval's "no" cases are all easy ones, and in real use 0.55 would still have proposed in 86% of moments. For diagram kinds, the expected kind ranks first in 84% (37/44) and lands in the top 3 in 100% (44/44).
+
 </details>
 
 ## 📤 What leaves your machine
@@ -116,7 +119,7 @@ In real use, 0.6 suggested too often (182 suggestions out of 224 judgements from
 |---|---|
 | Jev (TypeSafe) | The text being judged (the question and its options, or Claude's answer, last 6,000 characters) and your last 3 prompts (600 characters each). With the diagram check on, also the rendered PNG |
 | Claude (Anthropic) | When you press [Draw it], [Draw this] or [Redraw]: one extra request on the forked conversation, as in any other turn. A redraw request also carries your instruction and the previous diagram's D2 |
-| Local only | The answer log at `~/.claude/plugins/data/zu-de-clemens/` (probability, your reaction (`manual` for [Draw this], `redraw` for a redraw), diagram kind and title, for questions the question and your answer, and for redraws your instruction). The page opened with [Open larger] (`figure.html` in the same folder, overwritten each time; a CSP blocks any network access). It records why no proposal was shown (`below`, `no-key`, `jev-unavailable`, ...), which helps tuning the threshold |
+| Local only | The answer log at `~/.claude/plugins/data/zu-de-clemens/` (probability, your reaction (`manual` for [Draw this], `redraw` for a redraw), diagram kind and title, for questions the question and your answer, and for redraws your instruction). The page opened with [Open larger] (`figure.html` in the same folder, overwritten each time; a CSP blocks any network access). It records why no proposal was shown (`below`, `no-key`, `jev-unavailable`, ...), which helps tuning the threshold. Text you write in reply boxes only goes to your prompt box (as a draft) or the clipboard, and is sent only when you press Enter |
 
 ## 💰 Cost
 
@@ -129,6 +132,7 @@ In real use, 0.6 suggested too often (182 suggestions out of 224 judgements from
 - Tested on macOS only.
 - In the terminal, the diagram is D2's text output. Japanese labels are double-width, so boxes can be misaligned.
 - Nothing is sent to Jev when no screen shows the session, as in `claude -p`. The answer log records it as `not-shown`. Because Claude Code sometimes reports no screen at the end of an answer while you are watching, the plugin treats the session as watched if a screen was attached at your last prompt.
+- Proposals can still show too often, and the threshold cannot fix it. In real use, proposals you pressed had a median probability of 0.84 and ignored ones 0.80, so Jev's score barely separates them. The plan is to add realistic "no diagram" cases to the eval and revisit the question.
 - It does not learn. Pressing [Not now] only writes `dismissed` to the answer log; neither the threshold nor Jev's scoring changes. To improve the proposals, turn the reactions in the answer log into cases in `evals/cases.jsonl`, run `/zu-de-clemens-eval` and put the suggested threshold into the settings.
 - The diagram content is written by Claude in a fork of the current conversation, so its accuracy depends on the model the conversation uses. Jev only decides whether to propose and which diagram kinds to suggest.
 - A diagram reflects the answer it was drawn from. If a later answer changes the conclusion, the earlier diagram is not redrawn.
