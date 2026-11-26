@@ -24,7 +24,7 @@ https://github.com/user-attachments/assets/f4f7ee15-faf1-41ae-b48c-2c40b8a28e64
 
 - 🙋 **Proposes before drawing.** A cheap classifier ([Jev](https://docs.typesafe.ai/introduction) by TypeSafe) scores each moment. At or above the threshold, the pane shows a proposal with [Draw it] / [Not now]. Nothing is drawn until you press the button.
 - 🔔 **Three moments.** When Claude asks you a question (AskUserQuestion), when Claude finishes an answer, and when you ask for an overview of the session ("where are we now?").
-- 🧩 **Claude picks the diagram.** Jev ranks 21 diagram kinds (comparison, flow, layers, containment, sequence, state machine, timeline, kanban, ...). A fork of the current conversation writes the D2, which is validated (`d2 validate`) and rendered to SVG. Kinds that line things up (lists, tables, timelines, kanban) are built in the pane as framed cards. For questions, the pane also shows which option Claude recommends and why.
+- 🧩 **Claude picks the diagram.** Jev ranks 21 diagram kinds (comparison, flow, layers, containment, sequence, state machine, timeline, kanban, ...). A fork of the current conversation writes the D2, which is validated (`d2 validate`) and rendered to SVG. Kinds that line things up (lists, tables, timelines, kanban) are laid out in the pane inside frames. For questions, the pane also shows which option Claude recommends and why.
 - ✍️ **Answer questions inside the diagram.** When an answer asks you something ("plan A or plan B?"), a reply box appears under that question. [Put answers in the prompt box] adds your replies to the prompt box as "question → answer" lines. Nothing is sent until you press Enter.
 - 📌 **Stays until the next proposal.** A drawn diagram stays in the pane while you keep talking, until a new proposal replaces it.
 - 🌗 **Light or dark.** Diagram colors follow the app's appearance, picked for at least 4.5:1 contrast on text and 3:1 on lines.
@@ -72,6 +72,21 @@ These steps are written so that Claude Code can run them for you: give it the UR
    > 🔒 **For Claude Code running this install:** do not ask the user to paste the key into the chat, and do not pass it on the command line (it would stay in the transcript or the shell history). Ask the user to do this step themselves.
 
 5. Start a new session. The plugin loads at session start.
+
+## 🔄 Update
+
+Updates are not automatic: Claude Code turns auto-update off by default for every marketplace except the official one.
+
+To update by hand, run these two commands and start a new session (or run `/reload-plugins` in an open one):
+
+```bash
+claude plugin marketplace update zu-de-clemens
+claude plugin update zu-de-clemens@zu-de-clemens
+```
+
+The first only refreshes the marketplace listing and leaves the installed plugin as it is. The second replaces it.
+
+To update automatically, open `/plugin` in a session, select zu-de-clemens on the Marketplaces tab and turn auto-update on. Claude Code then fetches new versions in the background, within 10 minutes after your first message in a session. A new version arrives only when the version in `plugin.json` goes up.
 
 ## 💬 Usage
 
@@ -125,7 +140,7 @@ On 2026-11-24 the eval grew to 62 cases (44 "want", 18 "no"). It suggests 0.45, 
 |---|---|
 | Jev (TypeSafe) | The text being judged (the question and its options, or Claude's answer, last 6,000 characters) and your last 3 prompts (600 characters each). With the diagram check on, also the rendered PNG |
 | Claude (Anthropic) | When you press [Draw it], [Draw this] or [Redraw]: one extra request on the forked conversation, as in any other turn. A redraw request also carries your instruction and the previous diagram's D2 |
-| Local only | The answer log at `~/.claude/plugins/data/zu-de-clemens/` (probability, your reaction (`manual` for [Draw this], `redraw` for a redraw), diagram kind and title, for questions the question and your answer, and for redraws your instruction). The page opened with [Open larger] (`figure.html` in the same folder, overwritten each time; a CSP blocks any network access). It records why no proposal was shown (`below`, `no-key`, `jev-unavailable`, ...), which helps tuning the threshold. Text you write in reply boxes only goes to your prompt box (as a draft) or the clipboard, and is sent only when you press Enter |
+| Local only | The answer log at `~/.claude/plugins/data/zu-de-clemens/` (probability, your reaction (`manual` for [Draw this], `redraw` for a redraw), diagram kind and title, for questions the question and your answer, and for redraws your instruction). The page opened with [Open larger] (`figure.html` in the same folder, overwritten each time; a CSP blocks any network access). It records why no proposal was shown (`below`, `no-key`, `jev-unavailable`, ...), which is useful for tuning the threshold. Text you write in reply boxes only goes to your prompt box (as a draft) or the clipboard, and is sent only when you press Enter |
 
 ## 💰 Cost
 
